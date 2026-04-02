@@ -95,9 +95,9 @@ export default function NewProjectPage() {
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-2 mb-6">
-          <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
-          </Link>
+          </Button>
           <h1 className="text-2xl font-bold">New Project</h1>
         </div>
 

@@ -57,7 +57,7 @@ export default async function DashboardPage() {
             <span className="text-sm text-muted-foreground">{user.email}</span>
             <SubscriptionManager currentTier={tier} />
             <form action="/auth/signout" method="post">
-              <Button variant="ghost" size="sm">Sign Out</Button>
+              <Button type="submit" variant="ghost" size="sm">Sign Out</Button>
             </form>
           </div>
         </div>
