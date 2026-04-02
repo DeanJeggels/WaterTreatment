@@ -1,0 +1,204 @@
+import { describe, it, expect } from 'vitest';
+import { simulate } from '../src/graph/simulator';
+import { checkCompliance } from '../src/units/index';
+import type { GraphNode, GraphEdge } from '../src/graph/topological-sort';
+import type { WaterQuality, DischargeStandards } from '../src/types';
+
+// ── Conventional Activated Sludge Train ─────────────────────
+// Influent → Primary Clarifier → Aerobic Bioreactor → Secondary Clarifier → Effluent
+function conventionalASFlowsheet(): { nodes: GraphNode[]; edges: GraphEdge[] } {
+  const nodes: GraphNode[] = [
+    {
+      id: 'inf',
+      type: 'processUnit',
+      data: {
+        unitType: 'influent',
+        parameters: {
+          flow: 10000, COD: 500, sCOD: 200, BOD5: 250,
+          TKN: 40, NH3N: 25, NO3N: 0.5, TP: 8,
+          TSS: 250, VSS: 200, pH: 7.2, alkalinity: 5,
+          DO: 0, temperature: 20,
+        },
+      },
+    },
+    {
+      id: 'pc',
+      type: 'processUnit',
+      data: {
+        unitType: 'primary_clarifier',
+        parameters: {
+          tss_removal: 60, bod_removal: 30, cod_removal: 30,
+          tkn_removal: 15, tp_removal: 10,
+          surface_area: 500, depth: 3.5, uo_ratio: 0.05,
+        },
+      },
+    },
+    {
+      id: 'aer',
+      type: 'processUnit',
+      data: {
+        unitType: 'bioreactor_aerobic',
+        parameters: {
+          volume: 5000, do_setpoint: 2, srt: 12, yield_obs: 0.45,
+          nitrification_eff: 95, cod_removal_eff: 90, bod_removal_eff: 95, kd: 0.06,
+        },
+      },
+    },
+    {
+      id: 'sc',
+      type: 'processUnit',
+      data: {
+        unitType: 'secondary_clarifier',
+        parameters: {
+          surface_area: 800, tss_removal: 99.5, uo_ratio: 0.75,
+        },
+      },
+    },
+    {
+      id: 'eff',
+      type: 'processUnit',
+      data: {
+        unitType: 'effluent',
+        parameters: {},
+      },
+    },
+  ];
+
+  const edges: GraphEdge[] = [
+    { id: 'e1', source: 'inf', target: 'pc', sourceHandle: 'out', targetHandle: 'in' },
+    { id: 'e2', source: 'pc', target: 'aer', sourceHandle: 'overflow', targetHandle: 'in' },
+    { id: 'e3', source: 'aer', target: 'sc', sourceHandle: 'out', targetHandle: 'in' },
+    { id: 'e4', source: 'sc', target: 'eff', sourceHandle: 'overflow', targetHandle: 'in' },
+  ];
+
+  return { nodes, edges };
+}
+
+describe('Simulator: Conventional AS', () => {
+  it('converges without recycle edges', () => {
+    const { nodes, edges } = conventionalASFlowsheet();
+    const results = simulate(nodes, edges);
+
+    expect(results.converged).toBe(true);
+    expect(results.iterations).toBe(1); // no recycles
+  });
+
+  it('produces results for all nodes', () => {
+    const { nodes, edges } = conventionalASFlowsheet();
+    const results = simulate(nodes, edges);
+
+    expect(results.nodeResults['inf']).toBeDefined();
+    expect(results.nodeResults['pc']).toBeDefined();
+    expect(results.nodeResults['aer']).toBeDefined();
+    expect(results.nodeResults['sc']).toBeDefined();
+    expect(results.nodeResults['eff']).toBeDefined();
+  });
+
+  it('effluent has lower COD/BOD/NH3/TSS than influent', () => {
+    const { nodes, edges } = conventionalASFlowsheet();
+    const results = simulate(nodes, edges);
+
+    const infWQ = results.nodeResults['inf'].outputs['out'];
+    const effWQ = results.nodeResults['eff'].outputs['out'];
+
+    expect(effWQ.COD).toBeLessThan(infWQ.COD);
+    expect(effWQ.BOD5).toBeLessThan(infWQ.BOD5);
+    expect(effWQ.NH3N).toBeLessThan(infWQ.NH3N);
+    expect(effWQ.TSS).toBeLessThan(infWQ.TSS);
+  });
+
+  it('effluent TSS is very low (secondary clarifier effect)', () => {
+    const { nodes, edges } = conventionalASFlowsheet();
+    const results = simulate(nodes, edges);
+    const effWQ = results.nodeResults['eff'].outputs['out'];
+
+    expect(effWQ.TSS).toBeLessThan(30); // should be < 30 mg/L
+  });
+
+  it('nitrification produces NO3 from NH3', () => {
+    const { nodes, edges } = conventionalASFlowsheet();
+    const results = simulate(nodes, edges);
+    const effWQ = results.nodeResults['eff'].outputs['out'];
+
+    expect(effWQ.NO3N).toBeGreaterThan(15); // significant nitrification
+    expect(effWQ.NH3N).toBeLessThan(3); // most NH3 oxidised
+  });
+
+  it('compliance check passes for typical SA discharge standards', () => {
+    const { nodes, edges } = conventionalASFlowsheet();
+    const results = simulate(nodes, edges);
+    const effWQ = results.nodeResults['eff'].outputs['out'] as WaterQuality;
+
+    const standards: DischargeStandards = {
+      COD: 75,
+      BOD5: 10,
+      NH3N: 6,
+      TSS: 25,
+    };
+
+    const compliance = checkCompliance(effWQ, standards);
+    // NH3 and TSS should pass with good nitrification and clarification
+    expect(compliance.NH3N.pass).toBe(true);
+    expect(compliance.TSS.pass).toBe(true);
+  });
+});
+
+// ── Simple 2-node: Influent → Effluent ──────────────────────
+describe('Simulator: Simple pass-through', () => {
+  it('passes influent straight to effluent', () => {
+    const nodes: GraphNode[] = [
+      {
+        id: 'inf', type: 'processUnit',
+        data: { unitType: 'influent', parameters: { flow: 5000, COD: 300 } },
+      },
+      {
+        id: 'eff', type: 'processUnit',
+        data: { unitType: 'effluent', parameters: {} },
+      },
+    ];
+    const edges: GraphEdge[] = [
+      { id: 'e1', source: 'inf', target: 'eff', sourceHandle: 'out', targetHandle: 'in' },
+    ];
+
+    const results = simulate(nodes, edges);
+    expect(results.converged).toBe(true);
+    expect(results.nodeResults['eff'].outputs['out'].COD).toBe(300);
+    expect(results.nodeResults['eff'].outputs['out'].flow).toBe(5000);
+  });
+});
+
+// ── Splitter + Mixer mass balance ───────────────────────────
+describe('Simulator: Splitter → Mixer mass balance', () => {
+  it('preserves total flow and mass through split-merge', () => {
+    const nodes: GraphNode[] = [
+      {
+        id: 'inf', type: 'processUnit',
+        data: { unitType: 'influent', parameters: { flow: 10000, COD: 400 } },
+      },
+      {
+        id: 'split', type: 'processUnit',
+        data: { unitType: 'splitter', parameters: { split_ratio: 0.6 } },
+      },
+      {
+        id: 'mix', type: 'processUnit',
+        data: { unitType: 'mixer', parameters: {} },
+      },
+      {
+        id: 'eff', type: 'processUnit',
+        data: { unitType: 'effluent', parameters: {} },
+      },
+    ];
+    const edges: GraphEdge[] = [
+      { id: 'e1', source: 'inf', target: 'split', sourceHandle: 'out', targetHandle: 'in' },
+      { id: 'e2', source: 'split', target: 'mix', sourceHandle: 'main', targetHandle: 'in' },
+      { id: 'e3', source: 'split', target: 'mix', sourceHandle: 'side', targetHandle: 'in' },
+      { id: 'e4', source: 'mix', target: 'eff', sourceHandle: 'out', targetHandle: 'in' },
+    ];
+
+    const results = simulate(nodes, edges);
+    const effWQ = results.nodeResults['eff'].outputs['out'];
+
+    expect(effWQ.flow).toBeCloseTo(10000, 0);
+    expect(effWQ.COD).toBeCloseTo(400, 0);
+  });
+});

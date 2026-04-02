@@ -1,0 +1,104 @@
+import { create } from 'zustand';
+import {
+  type Node,
+  type Edge,
+  type OnNodesChange,
+  type OnEdgesChange,
+  type OnConnect,
+  applyNodeChanges,
+  applyEdgeChanges,
+  addEdge,
+} from '@xyflow/react';
+import type { UnitType } from '@repo/sim-engine';
+import { unitDefinitions } from '@repo/sim-engine';
+
+export interface FlowsheetNodeData {
+  unitType: UnitType;
+  label: string;
+  parameters: Record<string, number>;
+  [key: string]: unknown;
+}
+
+export type FlowsheetNode = Node<FlowsheetNodeData>;
+export type FlowsheetEdge = Edge;
+
+interface FlowsheetState {
+  nodes: FlowsheetNode[];
+  edges: FlowsheetEdge[];
+  selectedNodeId: string | null;
+  selectedEdgeId: string | null;
+
+  onNodesChange: OnNodesChange<FlowsheetNode>;
+  onEdgesChange: OnEdgesChange;
+  onConnect: OnConnect;
+
+  addNode: (type: UnitType, position: { x: number; y: number }) => void;
+  updateNodeData: (id: string, data: Partial<FlowsheetNodeData>) => void;
+  selectNode: (id: string | null) => void;
+  selectEdge: (id: string | null) => void;
+  setNodes: (nodes: FlowsheetNode[]) => void;
+  setEdges: (edges: FlowsheetEdge[]) => void;
+}
+
+let nodeIdCounter = 0;
+
+// Cache the lazy import to avoid creating a new promise on every callback
+let projectStorePromise: Promise<typeof import('./project-store')> | null = null;
+function getProjectStore() {
+  if (!projectStorePromise) projectStorePromise = import('./project-store');
+  return projectStorePromise;
+}
+
+export const useFlowsheetStore = create<FlowsheetState>((set, get) => ({
+  nodes: [],
+  edges: [],
+  selectedNodeId: null,
+  selectedEdgeId: null,
+
+  onNodesChange: (changes) => {
+    set({ nodes: applyNodeChanges(changes, get().nodes) as FlowsheetNode[] });
+    // Mark dirty for auto-save (lazy import to avoid circular deps)
+    getProjectStore().then(m => m.useProjectStore.getState().markDirty());
+  },
+
+  onEdgesChange: (changes) => {
+    set({ edges: applyEdgeChanges(changes, get().edges) });
+    getProjectStore().then(m => m.useProjectStore.getState().markDirty());
+  },
+
+  onConnect: (connection) => {
+    set({ edges: addEdge(connection, get().edges) });
+    getProjectStore().then(m => m.useProjectStore.getState().markDirty());
+  },
+
+  addNode: (type, position) => {
+    const def = unitDefinitions[type];
+    const id = `${type}-${++nodeIdCounter}`;
+    const newNode: FlowsheetNode = {
+      id,
+      type: 'processUnit',
+      position,
+      data: {
+        unitType: type,
+        label: def.label,
+        parameters: { ...def.defaultParameters },
+      },
+    };
+    set({ nodes: [...get().nodes, newNode] });
+    getProjectStore().then(m => m.useProjectStore.getState().markDirty());
+  },
+
+  updateNodeData: (id, data) => {
+    set({
+      nodes: get().nodes.map((node) =>
+        node.id === id ? { ...node, data: { ...node.data, ...data } } : node
+      ),
+    });
+    getProjectStore().then(m => m.useProjectStore.getState().markDirty());
+  },
+
+  selectNode: (id) => set({ selectedNodeId: id, selectedEdgeId: null }),
+  selectEdge: (id) => set({ selectedEdgeId: id, selectedNodeId: null }),
+  setNodes: (nodes) => set({ nodes }),
+  setEdges: (edges) => set({ edges }),
+}));
