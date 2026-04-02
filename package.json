@@ -1,5 +1,5 @@
 {
-  "name": "biowin-clone",
+  "name": "aquasim",
   "private": true,
   "scripts": {
     "build": "turbo run build",

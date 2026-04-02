@@ -7,7 +7,7 @@ import './globals.css';
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-  title: 'BioWin Clone — Wastewater Process Simulator',
+  title: 'AquaSim — Wastewater Process Simulator',
   description: 'Design, simulate, and optimize wastewater treatment processes with drag-and-drop flowsheets and real-time mass balance simulation.',
 };
 
