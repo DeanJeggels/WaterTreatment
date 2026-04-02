@@ -21,3 +21,7 @@ export function getProPriceId(): string {
 export function getEnterprisePriceId(): string {
   return process.env.STRIPE_ENTERPRISE_PRICE_ID ?? '';
 }
+
+export function isStripeConfigured(): boolean {
+  return !!process.env.STRIPE_SECRET_KEY;
+}
