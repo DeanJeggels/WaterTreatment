@@ -55,7 +55,7 @@ export default async function DashboardPage() {
               {tier.charAt(0).toUpperCase() + tier.slice(1)}
             </Badge>
             <span className="text-sm text-muted-foreground">{user.email}</span>
-            <SubscriptionManager currentTier={tier} />
+            <SubscriptionManager currentTier={tier} stripeConfigured={!!process.env.STRIPE_SECRET_KEY} />
             <form action="/auth/signout" method="post">
               <Button type="submit" variant="ghost" size="sm">Sign Out</Button>
             </form>
