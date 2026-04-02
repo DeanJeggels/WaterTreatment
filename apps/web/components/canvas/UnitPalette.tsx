@@ -45,7 +45,7 @@ export default function UnitPalette({
 }) {
   function onDragStart(event: React.DragEvent, unitType: UnitType) {
     if (disabled) { event.preventDefault(); return; }
-    event.dataTransfer.setData('application/biowin-unit-type', unitType);
+    event.dataTransfer.setData('application/aquasim-unit-type', unitType);
     event.dataTransfer.effectAllowed = 'move';
   }
 

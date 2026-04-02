@@ -41,7 +41,7 @@ export default function Canvas() {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      const unitType = event.dataTransfer.getData('application/biowin-unit-type') as UnitType;
+      const unitType = event.dataTransfer.getData('application/aquasim-unit-type') as UnitType;
       if (!unitType) return;
 
       const position = reactFlowInstance.screenToFlowPosition({

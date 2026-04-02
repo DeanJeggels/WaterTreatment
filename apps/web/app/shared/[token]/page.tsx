@@ -88,7 +88,7 @@ export default function SharedFlowsheetPage() {
         <header className="flex items-center justify-between h-12 px-4 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-4">
             <span className="text-sm font-bold">
-              BioWin <span className="text-primary">Clone</span>
+              Aqua<span className="text-primary">Sim</span>
             </span>
             <span className="text-muted-foreground">/</span>
             <span className="text-sm">{flowsheetName}</span>

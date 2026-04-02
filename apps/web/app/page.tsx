@@ -82,7 +82,7 @@ export default function LandingPage() {
       <header className="border-b border-border/50">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <span className="text-lg font-bold">
-            BioWin <span className="text-primary">Clone</span>
+            Aqua<span className="text-primary">Sim</span>
           </span>
           <div className="flex items-center gap-3">
             <Link href="/login">
@@ -247,7 +247,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border/50 py-8 px-4">
         <div className="container mx-auto flex items-center justify-between text-sm text-muted-foreground">
-          <span>BioWin Clone by CH-ISE (PTY) LTD</span>
+          <span>AquaSim by CH-ISE (PTY) LTD</span>
           <span>Wastewater Treatment Process Simulator</span>
         </div>
       </footer>

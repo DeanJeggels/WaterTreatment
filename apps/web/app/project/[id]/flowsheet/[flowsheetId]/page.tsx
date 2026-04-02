@@ -159,7 +159,7 @@ export default function FlowsheetEditorPage() {
         <header className="flex items-center justify-between h-12 px-4 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-4">
             <Link href="/dashboard" className="text-sm font-bold hover:opacity-80">
-              BioWin <span className="text-primary">Clone</span>
+              Aqua<span className="text-primary">Sim</span>
             </Link>
             <span className="text-muted-foreground">/</span>
             <span className="text-sm">{projectName}</span>

@@ -46,7 +46,7 @@ export default async function DashboardPage() {
       <header className="border-b border-border">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <h1 className="text-xl font-bold">
-            BioWin <span className="text-primary">Clone</span>
+            Aqua<span className="text-primary">Sim</span>
           </h1>
           <div className="flex items-center gap-4">
             <Badge variant={tier === 'free' ? 'secondary' : 'default'} className="text-xs">
