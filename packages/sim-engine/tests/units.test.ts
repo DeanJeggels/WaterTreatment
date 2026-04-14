@@ -243,6 +243,14 @@ describe('Mixer', () => {
     expect(result.outputs.out.COD).toBeCloseTo(180, 0);
     expect(result.outputs.out.flow).toBe(10000);
   });
+
+  it('emits v2 extended outputs (empty defaults in Phase 1a)', () => {
+    const unit = new Mixer({});
+    const a = { ...emptyWaterQuality(), flow: 500, COD: 400 };
+    const b = { ...emptyWaterQuality(), flow: 500, COD: 200 };
+    const result = unit.process([a, b]);
+    assertValidV2Outputs(result);
+  });
 });
 
 // ── Thickener ───────────────────────────────────────────────

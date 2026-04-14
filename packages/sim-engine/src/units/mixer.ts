@@ -1,5 +1,5 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition } from '../types';
-import { mixStreams } from '../types';
+import { mixStreams, emptyUnitOutputs } from '../types';
 
 export const mixerDefinition: UnitDefinition = {
   type: 'mixer',
@@ -24,6 +24,7 @@ export class Mixer implements ProcessUnit {
     return {
       outputs: { out: mixed },
       metadata: { num_inputs: inputs.length },
+      ...emptyUnitOutputs(),
     };
   }
 }
