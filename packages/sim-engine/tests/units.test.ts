@@ -109,6 +109,47 @@ describe('PrimaryClarifier', () => {
   });
 });
 
+describe('PrimaryClarifier — Phase 1b', () => {
+  it('emits sizing, BoQ, and calculation records with citations', () => {
+    const unit = new PrimaryClarifier({
+      tss_removal: 60, bod_removal: 30, cod_removal: 30,
+      tkn_removal: 15, tp_removal: 10, uo_ratio: 0.05,
+      surface_area: 500, depth: 3.5,
+    });
+    const inf = { ...emptyWaterQuality(), flow: 15000, TSS: 300, COD: 800 };
+    const result = unit.process([inf]);
+
+    expect(result.sizing?.surfaceArea.value).toBe(500);
+    expect(result.sizing?.surfaceArea.unit).toBe('m2');
+    expect(result.sizing?.volume.value).toBeCloseTo(500 * 3.5, 1);
+    expect(result.sizing?.volume.unit).toBe('m3');
+
+    expect(result.capex?.lineItems.length).toBeGreaterThanOrEqual(2);
+    const civil = result.capex!.lineItems.find(i => i.category === 'civil');
+    expect(civil).toBeDefined();
+    expect(civil!.sourceCitation).toContain('CH-ISE internal estimate');
+    const mech = result.capex!.lineItems.find(i => i.category === 'mechanical');
+    expect(mech).toBeDefined();
+    expect(result.capex!.total).toBeGreaterThan(0);
+
+    assertHasCalculationRecord(result.calculationRecords, 'SOR');
+    assertHasCalculationRecord(result.calculationRecords, 'HRT');
+    assertAllRecordsValid(result.calculationRecords);
+  });
+
+  it('warns when SOR exceeds 40 m3/m2/d at ADWF', () => {
+    const unit = new PrimaryClarifier({
+      tss_removal: 60, bod_removal: 30, cod_removal: 30,
+      tkn_removal: 15, tp_removal: 10, uo_ratio: 0.05,
+      surface_area: 100, depth: 3.5,
+    });
+    const inf = { ...emptyWaterQuality(), flow: 10000, TSS: 300 };
+    const result = unit.process([inf]);
+    expect(result.warnings?.length).toBeGreaterThan(0);
+    expect(result.warnings![0]).toMatch(/SOR/i);
+  });
+});
+
 // ── Aerobic Bioreactor ──────────────────────────────────────
 describe('BioreactorAerobic', () => {
   it('removes sCOD and performs nitrification', () => {

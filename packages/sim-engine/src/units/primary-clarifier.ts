@@ -1,6 +1,15 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
 
+// === Supplier price references (Phase 1b inline — Phase 3 moves to design-library) ===
+// Civil concrete reinforced circular/rectangular primary clarifier
+// Source: CH-ISE internal estimate 2026, typical SA contractor rate
+const CIVIL_CONCRETE_ZAR_PER_M3 = 18000;
+
+// Primary clarifier rotating scraper bridge (small plant, <1000 m² area)
+// Source: Typical SA supplier quote 2025 (Andritz / Tsurumi range)
+const PRIMARY_SCRAPER_ZAR = 280000;
+
 const parameterSchema: ParameterField[] = [
   { key: 'tss_removal', label: 'TSS Removal', unit: '%', min: 30, max: 90, step: 1, defaultValue: 60 },
   { key: 'bod_removal', label: 'BOD Removal', unit: '%', min: 10, max: 60, step: 1, defaultValue: 30 },
@@ -85,13 +94,79 @@ export class PrimaryClarifier implements ProcessUnit {
       temperature: inf.temperature,
     };
 
+    const base = emptyUnitOutputs();
+    const area = p.surface_area ?? 500;
+    const depth = p.depth ?? 3.5;
+    const volume = area * depth;
+    const sor = inf.flow / area;
+    const hrt_h = (volume / inf.flow) * 24;
+
+    base.sizing = {
+      surfaceArea: { value: area, unit: 'm2' },
+      depth: { value: depth, unit: 'm' },
+      volume: { value: volume, unit: 'm3' },
+    };
+
+    base.capex = {
+      lineItems: [
+        {
+          category: 'civil',
+          description: `Primary clarifier reinforced concrete tank (${volume.toFixed(0)} m³)`,
+          quantity: volume,
+          unit: 'm3',
+          unitPriceZar: CIVIL_CONCRETE_ZAR_PER_M3,
+          sourceCitation: 'CH-ISE internal estimate 2026',
+        },
+        {
+          category: 'mechanical',
+          description: 'Primary clarifier rotating scraper bridge',
+          quantity: 1,
+          unit: 'ea',
+          unitPriceZar: PRIMARY_SCRAPER_ZAR,
+          sourceCitation: 'Typical SA supplier quote 2025 (Andritz/Tsurumi range)',
+        },
+      ],
+      total: volume * CIVIL_CONCRETE_ZAR_PER_M3 + PRIMARY_SCRAPER_ZAR,
+    };
+
+    base.calculationRecords = [
+      {
+        label: 'Surface overflow rate (ADWF)',
+        symbol: 'SOR',
+        equation: 'SOR = Q / A',
+        inputs: {
+          Q: { value: inf.flow, unit: 'm3/d', source: 'inlet flow' },
+          A: { value: area, unit: 'm2', source: 'user input' },
+        },
+        result: { value: sor, unit: 'm3/m2/d' },
+        citation: 'Metcalf & Eddy (2014) Ch. 5 / WRC TT-16/84',
+      },
+      {
+        label: 'Hydraulic retention time',
+        symbol: 'HRT',
+        equation: 'HRT = V / Q × 24',
+        inputs: {
+          V: { value: volume, unit: 'm3', source: 'A × d' },
+          Q: { value: inf.flow, unit: 'm3/d', source: 'inlet flow' },
+        },
+        result: { value: hrt_h, unit: 'h' },
+        citation: 'Metcalf & Eddy (2014) Ch. 5',
+      },
+    ];
+
+    if (sor > 40) {
+      base.warnings.push(
+        `SOR = ${sor.toFixed(1)} m³/m²·d exceeds typical design limit of 40 m³/m²·d at ADWF. Increase surface area.`,
+      );
+    }
+
     return {
       outputs: { overflow, underflow },
       metadata: {
-        surface_loading_rate: inf.flow / (p.surface_area ?? 500),
-        hydraulic_retention_time: (p.surface_area ?? 500) * (p.depth ?? 3.5) / inf.flow * 24, // hours
+        surface_loading_rate: sor,
+        hydraulic_retention_time: hrt_h,
       },
-      ...emptyUnitOutputs(),
+      ...base,
     };
   }
 }
