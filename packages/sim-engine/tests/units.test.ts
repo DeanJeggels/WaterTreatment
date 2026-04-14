@@ -12,9 +12,10 @@ import {
   Effluent,
   checkCompliance,
   createUnit,
+  unitDefinitions,
 } from '../src/units/index';
 import { emptyWaterQuality, mixStreams } from '../src/types';
-import type { WaterQuality } from '../src/types';
+import type { WaterQuality, UnitType } from '../src/types';
 import { assertValidV2Outputs } from './helpers/v2-outputs';
 import { assertHasCalculationRecord, assertAllRecordsValid } from './helpers/calculation-records';
 
@@ -659,5 +660,18 @@ describe('mixStreams', () => {
     const result = mixStreams([a, b]);
     expect(result.flow).toBe(10000);
     expect(result.COD).toBeCloseTo(140, 0);
+  });
+});
+
+describe("Phase 2 — UnitType registry", () => {
+  it("includes all 9 new unit types in the union", () => {
+    const newTypes: UnitType[] = [
+      "screen", "grit_removal", "equalisation_tank", "mbr",
+      "aeration_blower", "dewatering", "chemical_dosing",
+      "uv_disinfection", "inlet_pumping",
+    ];
+    for (const t of newTypes) {
+      expect(unitDefinitions[t], `Missing unit definition for "${t}"`).toBeDefined();
+    }
   });
 });

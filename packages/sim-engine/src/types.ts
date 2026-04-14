@@ -96,6 +96,7 @@ export interface ParameterField {
 
 /** All supported process unit types */
 export type UnitType =
+  // v1 (existing)
   | 'influent'
   | 'primary_clarifier'
   | 'bioreactor_aerobic'
@@ -105,7 +106,17 @@ export type UnitType =
   | 'splitter'
   | 'mixer'
   | 'thickener'
-  | 'effluent';
+  | 'effluent'
+  // v2 Phase 2 (new)
+  | 'screen'
+  | 'grit_removal'
+  | 'equalisation_tank'
+  | 'mbr'
+  | 'aeration_blower'
+  | 'dewatering'
+  | 'chemical_dosing'
+  | 'uv_disinfection'
+  | 'inlet_pumping';
 
 /** Interface that every unit model must implement */
 export interface ProcessUnit {
