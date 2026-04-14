@@ -1,9 +1,17 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
 
+// === Supplier price references (Phase 1b inline — Phase 3 moves to design-library) ===
+const CIVIL_CONCRETE_ZAR_PER_M3 = 18000;
+// Picket fence thickener drive (~3 kW)
+// Source: Typical SA supplier quote 2025 (Westech / Andritz range)
+const PICKET_FENCE_DRIVE_ZAR = 180000;
+
 const parameterSchema: ParameterField[] = [
   { key: 'target_solids_pct', label: 'Target Solids', unit: '%', min: 1, max: 10, step: 0.5, defaultValue: 5 },
   { key: 'capture_efficiency', label: 'Capture Efficiency', unit: '%', min: 80, max: 99, step: 1, defaultValue: 95 },
+  { key: 'surface_area', label: 'Surface Area', unit: 'm²', min: 5, max: 500, step: 5, defaultValue: 30 },
+  { key: 'depth', label: 'Depth', unit: 'm', min: 2, max: 5, step: 0.5, defaultValue: 3.0 },
 ];
 
 export const thickenerDefinition: UnitDefinition = {
@@ -75,6 +83,56 @@ export class Thickener implements ProcessUnit {
       temperature: inf.temperature,
     };
 
+    const area = p.surface_area ?? 30;
+    const depth = p.depth ?? 3.0;
+    const volume = area * depth;
+    const solidsLoadKg = (inf.TSS * inf.flow) / 1000;
+    const slr = solidsLoadKg / area;
+
+    const base = emptyUnitOutputs();
+    base.sizing = {
+      surfaceArea: { value: area, unit: 'm2' },
+      depth: { value: depth, unit: 'm' },
+      volume: { value: volume, unit: 'm3' },
+    };
+    base.capex = {
+      lineItems: [
+        {
+          category: 'civil',
+          description: `Gravity thickener reinforced concrete tank (${volume.toFixed(0)} m³)`,
+          quantity: volume,
+          unit: 'm3',
+          unitPriceZar: CIVIL_CONCRETE_ZAR_PER_M3,
+          sourceCitation: 'CH-ISE internal estimate 2026',
+        },
+        {
+          category: 'mechanical',
+          description: 'Picket fence thickener drive',
+          quantity: 1,
+          unit: 'ea',
+          unitPriceZar: PICKET_FENCE_DRIVE_ZAR,
+          sourceCitation: 'Typical SA supplier quote 2025 (Westech/Andritz range)',
+        },
+      ],
+      total: volume * CIVIL_CONCRETE_ZAR_PER_M3 + PICKET_FENCE_DRIVE_ZAR,
+    };
+    base.calculationRecords = [
+      {
+        label: 'Solids loading rate',
+        symbol: 'SLR',
+        equation: 'SLR = (Q × TSS) / (A × 1000)',
+        inputs: {
+          Q: { value: inf.flow, unit: 'm3/d', source: 'inlet flow' },
+          TSS: { value: inf.TSS, unit: 'mg/L', source: 'inlet TSS' },
+          A: { value: area, unit: 'm2', source: 'user input' },
+        },
+        result: { value: slr, unit: 'kg/m2/d' },
+        citation: 'Metcalf & Eddy (2014) Ch. 14 — SLR ≤ 40 kg/m²·d',
+      },
+    ];
+    if (slr > 40)
+      base.warnings.push(`SLR = ${slr.toFixed(1)} kg/m²·d exceeds 40 kg/m²·d. Increase surface area.`);
+
     return {
       outputs: { thickened, overflow },
       metadata: {
@@ -82,7 +140,7 @@ export class Thickener implements ProcessUnit {
         thickened_flow: flowThickened,
         thickened_TSS: targetTSS,
       },
-      ...emptyUnitOutputs(),
+      ...base,
     };
   }
 }
