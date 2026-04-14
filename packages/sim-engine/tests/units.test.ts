@@ -223,6 +223,13 @@ describe('Splitter', () => {
     expect(result.outputs.main.COD).toBe(500);
     expect(result.outputs.side.COD).toBe(500);
   });
+
+  it('emits v2 extended outputs (empty defaults in Phase 1a)', () => {
+    const unit = new Splitter({ split_ratio: 0.5 });
+    const input = { ...emptyWaterQuality(), flow: 1000 };
+    const result = unit.process([input]);
+    assertValidV2Outputs(result);
+  });
 });
 
 // ── Mixer ───────────────────────────────────────────────────
