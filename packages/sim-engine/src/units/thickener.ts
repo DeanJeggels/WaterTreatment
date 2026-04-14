@@ -1,11 +1,6 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
-
-// === Supplier price references (Phase 1b inline — Phase 3 moves to design-library) ===
-const CIVIL_CONCRETE_ZAR_PER_M3 = 18000;
-// Picket fence thickener drive (~3 kW)
-// Source: Typical SA supplier quote 2025 (Westech / Andritz range)
-const PICKET_FENCE_DRIVE_ZAR = 180000;
+import { getPrice } from '@repo/design-library';
 
 const parameterSchema: ParameterField[] = [
   { key: 'target_solids_pct', label: 'Target Solids', unit: '%', min: 1, max: 10, step: 0.5, defaultValue: 5 },
@@ -95,6 +90,8 @@ export class Thickener implements ProcessUnit {
       depth: { value: depth, unit: 'm' },
       volume: { value: volume, unit: 'm3' },
     };
+    const civilPrice = getPrice('civil_concrete_reinforced');
+    const drivePrice = getPrice('picket_fence_thickener_drive');
     base.capex = {
       lineItems: [
         {
@@ -102,19 +99,19 @@ export class Thickener implements ProcessUnit {
           description: `Gravity thickener reinforced concrete tank (${volume.toFixed(0)} m³)`,
           quantity: volume,
           unit: 'm3',
-          unitPriceZar: CIVIL_CONCRETE_ZAR_PER_M3,
-          sourceCitation: 'CH-ISE internal estimate 2026',
+          unitPriceZar: civilPrice.unitPriceZar,
+          sourceCitation: civilPrice.source,
         },
         {
           category: 'mechanical',
           description: 'Picket fence thickener drive',
           quantity: 1,
           unit: 'ea',
-          unitPriceZar: PICKET_FENCE_DRIVE_ZAR,
-          sourceCitation: 'Typical SA supplier quote 2025 (Westech/Andritz range)',
+          unitPriceZar: drivePrice.unitPriceZar,
+          sourceCitation: drivePrice.source,
         },
       ],
-      total: volume * CIVIL_CONCRETE_ZAR_PER_M3 + PICKET_FENCE_DRIVE_ZAR,
+      total: volume * civilPrice.unitPriceZar + drivePrice.unitPriceZar,
     };
     base.calculationRecords = [
       {
