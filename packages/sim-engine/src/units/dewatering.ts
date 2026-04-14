@@ -1,12 +1,6 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { emptyWaterQuality, emptyUnitOutputs } from '../types';
-
-// === Supplier price references (Phase 2 inline — Phase 3 moves to design-library) ===
-const BELT_PRESS_ZAR = 850000;
-const CENTRIFUGE_ZAR = 2200000;
-const POLYMER_ZAR_PER_KG = 65;
-const CAKE_DISPOSAL_ZAR_PER_TONNE = 350;
-const CIVIL_CONCRETE_ZAR_PER_M3 = 18000;
+import { getPrice } from '@repo/design-library';
 
 const parameterSchema: ParameterField[] = [
   { key: 'dewatering_type', label: 'Type (0=belt press, 1=centrifuge)', unit: '', min: 0, max: 1, step: 1, defaultValue: 0 },
@@ -96,6 +90,10 @@ export class Dewatering implements ProcessUnit {
       solidsLoad: { value: solidsIn_kg_d, unit: 'kg/d' },
       cakeSolids: { value: cakeSolidsPct, unit: '%' },
     };
+    const civilPrice = getPrice('civil_concrete_reinforced');
+    const mechPrice = isCentrifuge ? getPrice('decanter_centrifuge_5m3h') : getPrice('belt_press_1m');
+    const polymerPrice = getPrice('polymer_cationic_dry');
+    const cakePrice = getPrice('cake_landfill_disposal');
     base.capex = {
       lineItems: [
         {
@@ -103,8 +101,8 @@ export class Dewatering implements ProcessUnit {
           description: 'Dewatering building civils',
           quantity: 40,
           unit: 'm3',
-          unitPriceZar: CIVIL_CONCRETE_ZAR_PER_M3,
-          sourceCitation: 'CH-ISE internal estimate 2026',
+          unitPriceZar: civilPrice.unitPriceZar,
+          sourceCitation: civilPrice.source,
         },
         {
           category: 'mechanical',
@@ -113,26 +111,24 @@ export class Dewatering implements ProcessUnit {
             : 'Belt press 1 m (Andritz SMX class)',
           quantity: 1,
           unit: 'ea',
-          unitPriceZar: isCentrifuge ? CENTRIFUGE_ZAR : BELT_PRESS_ZAR,
-          sourceCitation: isCentrifuge
-            ? 'Alfa Laval catalogue 2024'
-            : 'Andritz SMX catalogue 2024',
+          unitPriceZar: mechPrice.unitPriceZar,
+          sourceCitation: mechPrice.source,
         },
       ],
-      total: 40 * CIVIL_CONCRETE_ZAR_PER_M3 + (isCentrifuge ? CENTRIFUGE_ZAR : BELT_PRESS_ZAR),
+      total: 40 * civilPrice.unitPriceZar + mechPrice.unitPriceZar,
     };
     base.consumables = [
       {
         item: 'Cationic polymer',
         daily: polymerDaily_kg,
         unit: 'kg/d',
-        citation: `Grundfos / SNF 2025 — ${POLYMER_ZAR_PER_KG} ZAR/kg dry polymer`,
+        citation: polymerPrice.source,
       },
       {
         item: 'Cake disposal to landfill',
         daily: cakeDaily_tonne,
         unit: 't DS/d',
-        citation: `Typical SA landfill tipping 2025 — ${CAKE_DISPOSAL_ZAR_PER_TONNE} ZAR/t`,
+        citation: cakePrice.source,
       },
     ];
     base.calculationRecords = [
