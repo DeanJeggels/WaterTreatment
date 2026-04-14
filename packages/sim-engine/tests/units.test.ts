@@ -276,6 +276,15 @@ describe('Splitter', () => {
     const result = unit.process([input]);
     assertValidV2Outputs(result);
   });
+
+  it('emits split-ratio calculation records', () => {
+    const unit = new Splitter({ split_ratio: 0.3 });
+    const inf = { ...emptyWaterQuality(), flow: 1000 };
+    const result = unit.process([inf]);
+    const rec = assertHasCalculationRecord(result.calculationRecords, 'split flow to main');
+    expect(rec.result.value).toBeCloseTo(300, 1);
+    assertAllRecordsValid(result.calculationRecords);
+  });
 });
 
 // ── Mixer ───────────────────────────────────────────────────
@@ -296,6 +305,16 @@ describe('Mixer', () => {
     const b = { ...emptyWaterQuality(), flow: 500, COD: 200 };
     const result = unit.process([a, b]);
     assertValidV2Outputs(result);
+  });
+
+  it('emits flow-weighted mix calculation records', () => {
+    const unit = new Mixer({});
+    const a = { ...emptyWaterQuality(), flow: 600, COD: 400 };
+    const b = { ...emptyWaterQuality(), flow: 400, COD: 200 };
+    const result = unit.process([a, b]);
+    const rec = assertHasCalculationRecord(result.calculationRecords, 'combined flow');
+    expect(rec.result.value).toBeCloseTo(1000, 1);
+    assertAllRecordsValid(result.calculationRecords);
   });
 });
 
@@ -331,6 +350,16 @@ describe('Effluent', () => {
     const input = { ...emptyWaterQuality(), flow: 500, COD: 50 };
     const result = unit.process([input]);
     assertValidV2Outputs(result);
+  });
+
+  it('emits effluent-summary calculation records with citations', () => {
+    const unit = new Effluent({});
+    const inf = { ...emptyWaterQuality(), flow: 1000, COD: 60, NH3N: 1.5, NO3N: 8, TSS: 15, TP: 2 };
+    const result = unit.process([inf]);
+    assertHasCalculationRecord(result.calculationRecords, 'effluent flow');
+    assertHasCalculationRecord(result.calculationRecords, 'effluent COD');
+    assertHasCalculationRecord(result.calculationRecords, 'effluent NH3-N');
+    assertAllRecordsValid(result.calculationRecords);
   });
 });
 
