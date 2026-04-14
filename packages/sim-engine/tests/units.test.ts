@@ -295,6 +295,38 @@ describe('SecondaryClarifier', () => {
   });
 });
 
+describe('SecondaryClarifier — Phase 1b', () => {
+  it('emits sizing with SOR and SLR checks, BoQ, and records', () => {
+    const unit = new SecondaryClarifier({
+      surface_area: 800, depth: 4.0, tss_removal: 99.5, uo_ratio: 0.75,
+    });
+    const inf = { ...emptyWaterQuality(), flow: 10000, TSS: 3500 };
+    const result = unit.process([inf]);
+
+    expect(result.sizing?.surfaceArea.value).toBe(800);
+    expect(result.sizing?.volume.value).toBeCloseTo(3200, 1);
+
+    assertHasCalculationRecord(result.calculationRecords, 'SOR');
+    assertHasCalculationRecord(result.calculationRecords, 'SLR');
+
+    const civil = result.capex!.lineItems.find(i => i.category === 'civil');
+    const mech = result.capex!.lineItems.find(i => i.category === 'mechanical');
+    expect(civil).toBeDefined();
+    expect(mech).toBeDefined();
+    expect(result.capex!.total).toBeGreaterThan(0);
+    assertAllRecordsValid(result.calculationRecords);
+  });
+
+  it('warns when SLR exceeds 6 kg/m2/h at peak', () => {
+    const unit = new SecondaryClarifier({
+      surface_area: 100, depth: 4.0, tss_removal: 99.5, uo_ratio: 0.75,
+    });
+    const inf = { ...emptyWaterQuality(), flow: 10000, TSS: 5000 };
+    const result = unit.process([inf]);
+    expect(result.warnings?.some(w => /SLR/i.test(w))).toBe(true);
+  });
+});
+
 // ── Splitter ────────────────────────────────────────────────
 describe('Splitter', () => {
   it('splits flow according to ratio', () => {
@@ -374,6 +406,26 @@ describe('Thickener', () => {
     const input = { ...emptyWaterQuality(), flow: 100, TSS: 10000 };
     const result = unit.process([input]);
     assertValidV2Outputs(result);
+  });
+});
+
+describe('Thickener — Phase 1b', () => {
+  it('emits sizing with SLR check, civil + drive BoQ, and records', () => {
+    const unit = new Thickener({
+      target_solids_pct: 5, capture_efficiency: 95,
+      surface_area: 30, depth: 3.0,
+    });
+    const inf = { ...emptyWaterQuality(), flow: 100, TSS: 10000 };
+    const result = unit.process([inf]);
+    expect(result.sizing?.surfaceArea.value).toBe(30);
+    expect(result.sizing?.volume.value).toBeCloseTo(90, 1);
+    assertHasCalculationRecord(result.calculationRecords, 'SLR');
+    const civil = result.capex!.lineItems.find(i => i.category === 'civil');
+    const mech = result.capex!.lineItems.find(i => i.category === 'mechanical');
+    expect(civil).toBeDefined();
+    expect(mech).toBeDefined();
+    expect(result.capex!.total).toBeGreaterThan(0);
+    assertAllRecordsValid(result.calculationRecords);
   });
 });
 
