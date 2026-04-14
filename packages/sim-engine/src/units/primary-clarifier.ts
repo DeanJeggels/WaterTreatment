@@ -1,14 +1,6 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
-
-// === Supplier price references (Phase 1b inline — Phase 3 moves to design-library) ===
-// Civil concrete reinforced circular/rectangular primary clarifier
-// Source: CH-ISE internal estimate 2026, typical SA contractor rate
-const CIVIL_CONCRETE_ZAR_PER_M3 = 18000;
-
-// Primary clarifier rotating scraper bridge (small plant, <1000 m² area)
-// Source: Typical SA supplier quote 2025 (Andritz / Tsurumi range)
-const PRIMARY_SCRAPER_ZAR = 280000;
+import { getPrice } from '@repo/design-library';
 
 const parameterSchema: ParameterField[] = [
   { key: 'tss_removal', label: 'TSS Removal', unit: '%', min: 30, max: 90, step: 1, defaultValue: 60 },
@@ -107,6 +99,8 @@ export class PrimaryClarifier implements ProcessUnit {
       volume: { value: volume, unit: 'm3' },
     };
 
+    const civilPrice = getPrice('civil_concrete_reinforced');
+    const scraperPrice = getPrice('primary_clarifier_scraper_bridge');
     base.capex = {
       lineItems: [
         {
@@ -114,19 +108,19 @@ export class PrimaryClarifier implements ProcessUnit {
           description: `Primary clarifier reinforced concrete tank (${volume.toFixed(0)} m³)`,
           quantity: volume,
           unit: 'm3',
-          unitPriceZar: CIVIL_CONCRETE_ZAR_PER_M3,
-          sourceCitation: 'CH-ISE internal estimate 2026',
+          unitPriceZar: civilPrice.unitPriceZar,
+          sourceCitation: civilPrice.source,
         },
         {
           category: 'mechanical',
           description: 'Primary clarifier rotating scraper bridge',
           quantity: 1,
           unit: 'ea',
-          unitPriceZar: PRIMARY_SCRAPER_ZAR,
-          sourceCitation: 'Typical SA supplier quote 2025 (Andritz/Tsurumi range)',
+          unitPriceZar: scraperPrice.unitPriceZar,
+          sourceCitation: scraperPrice.source,
         },
       ],
-      total: volume * CIVIL_CONCRETE_ZAR_PER_M3 + PRIMARY_SCRAPER_ZAR,
+      total: volume * civilPrice.unitPriceZar + scraperPrice.unitPriceZar,
     };
 
     base.calculationRecords = [
