@@ -30,10 +30,36 @@ export class Splitter implements ProcessUnit {
     const main: WaterQuality = { ...inf, flow: inf.flow * ratio };
     const side: WaterQuality = { ...inf, flow: inf.flow * (1 - ratio) };
 
+    const base = emptyUnitOutputs();
+    base.calculationRecords = [
+      {
+        label: 'Split flow to main',
+        symbol: 'Qmain',
+        equation: 'Qmain = Q × r',
+        inputs: {
+          Q: { value: inf.flow, unit: 'm3/d', source: 'inlet flow' },
+          r: { value: ratio, unit: '', source: 'split ratio parameter' },
+        },
+        result: { value: inf.flow * ratio, unit: 'm3/d' },
+        citation: 'Flow bookkeeping',
+      },
+      {
+        label: 'Split flow to side',
+        symbol: 'Qside',
+        equation: 'Qside = Q × (1 − r)',
+        inputs: {
+          Q: { value: inf.flow, unit: 'm3/d', source: 'inlet flow' },
+          r: { value: ratio, unit: '', source: 'split ratio parameter' },
+        },
+        result: { value: inf.flow * (1 - ratio), unit: 'm3/d' },
+        citation: 'Flow bookkeeping',
+      },
+    ];
+
     return {
       outputs: { main, side },
       metadata: { split_ratio: ratio },
-      ...emptyUnitOutputs(),
+      ...base,
     };
   }
 }
