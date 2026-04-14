@@ -1,9 +1,7 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { emptyUnitOutputs } from '../types';
+import { getPrice } from '@repo/design-library';
 
-// === Supplier price references (Phase 2 inline — Phase 3 moves to design-library) ===
-const PD_BLOWER_ZAR = 180000;
-const HST_TURBO_ZAR = 1200000;
 const HST_THRESHOLD_KW = 50;
 
 const parameterSchema: ParameterField[] = [
@@ -44,7 +42,7 @@ export class AerationBlower implements ProcessUnit {
     const dailyKWh = installedKW * 24;
 
     const isHst = installedKW > HST_THRESHOLD_KW;
-    const blowerUnitPrice = isHst ? HST_TURBO_ZAR : PD_BLOWER_ZAR;
+    const blowerPrice = isHst ? getPrice('hst_turbo_blower') : getPrice('pd_blower_small');
     const blowerDescription = isHst
       ? 'HST turbo blower (Sulzer/APG Neuros class)'
       : 'PD blower (Aerzen/WEG class)';
@@ -79,13 +77,11 @@ export class AerationBlower implements ProcessUnit {
           description: blowerDescription,
           quantity: 1,
           unit: 'ea',
-          unitPriceZar: blowerUnitPrice,
-          sourceCitation: isHst
-            ? 'Sulzer HST / APG Neuros catalogue 2025'
-            : 'Aerzen / WEG SA distributor 2025',
+          unitPriceZar: blowerPrice.unitPriceZar,
+          sourceCitation: blowerPrice.source,
         },
       ],
-      total: blowerUnitPrice,
+      total: blowerPrice.unitPriceZar,
     };
     base.calculationRecords = [
       {
