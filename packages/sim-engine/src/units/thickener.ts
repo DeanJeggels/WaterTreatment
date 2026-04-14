@@ -1,5 +1,5 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
-import { mixStreams, emptyWaterQuality } from '../types';
+import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
 
 const parameterSchema: ParameterField[] = [
   { key: 'target_solids_pct', label: 'Target Solids', unit: '%', min: 1, max: 10, step: 0.5, defaultValue: 5 },
@@ -30,7 +30,7 @@ export class Thickener implements ProcessUnit {
 
     if (inf.flow <= 0) {
       const zero = emptyWaterQuality();
-      return { outputs: { thickened: zero, overflow: zero }, metadata: {} };
+      return { outputs: { thickened: zero, overflow: zero }, metadata: {}, ...emptyUnitOutputs() };
     }
 
     const targetSolids = (p.target_solids_pct ?? 5) / 100;
@@ -82,6 +82,7 @@ export class Thickener implements ProcessUnit {
         thickened_flow: flowThickened,
         thickened_TSS: targetTSS,
       },
+      ...emptyUnitOutputs(),
     };
   }
 }
