@@ -4,6 +4,7 @@ import { checkCompliance } from '../src/units/index';
 import type { GraphNode, GraphEdge } from '../src/graph/topological-sort';
 import type { WaterQuality, DischargeStandards, ProcessResult } from '../src/types';
 import { assertValidV2Outputs } from './helpers/v2-outputs';
+import { assertAllRecordsValid } from './helpers/calculation-records';
 
 // ── Conventional Activated Sludge Train ─────────────────────
 // Influent → Primary Clarifier → Aerobic Bioreactor → Secondary Clarifier → Effluent
@@ -151,6 +152,30 @@ describe('v2 outputs — full train', () => {
     for (const nodeResult of Object.values(results.nodeResults)) {
       assertValidV2Outputs(nodeResult as ProcessResult);
     }
+  });
+});
+
+describe('v2 content — full AS train', () => {
+  it('produces real sizing, energy, BoQ, and calc records end-to-end', () => {
+    const { nodes, edges } = conventionalASFlowsheet();
+    const results = simulate(nodes, edges);
+
+    let totalCapex = 0;
+    let totalKW = 0;
+    let totalRecordCount = 0;
+    for (const nodeResult of Object.values(results.nodeResults)) {
+      const r = nodeResult as ProcessResult;
+      if (r.capex?.total) totalCapex += r.capex.total;
+      if (r.energy?.installedKW) totalKW += r.energy.installedKW;
+      if (r.calculationRecords) {
+        totalRecordCount += r.calculationRecords.length;
+        assertAllRecordsValid(r.calculationRecords);
+      }
+    }
+
+    expect(totalCapex).toBeGreaterThan(1_000_000);
+    expect(totalKW).toBeGreaterThanOrEqual(0);
+    expect(totalRecordCount).toBeGreaterThan(10);
   });
 });
 
