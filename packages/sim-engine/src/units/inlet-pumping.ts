@@ -1,11 +1,6 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { emptyWaterQuality, emptyUnitOutputs } from '../types';
-
-// === Supplier price references (Phase 2 inline — Phase 3 moves to design-library) ===
-const PUMP_SMALL_ZAR = 35000;
-const PUMP_MEDIUM_ZAR = 65000;
-const PUMP_LARGE_ZAR = 95000;
-const WET_WELL_ZAR_PER_M3 = 22000;
+import { getPrice } from '@repo/design-library';
 
 const parameterSchema: ParameterField[] = [
   { key: 'tdh_m', label: 'Total dynamic head', unit: 'm', min: 3, max: 30, step: 0.5, defaultValue: 10 },
@@ -53,15 +48,16 @@ export class InletPumping implements ProcessUnit {
 
     const wetWellVolume = (inf.flow * wetWellHrtMin) / 1440;
 
-    let pumpUnitPrice = PUMP_SMALL_ZAR;
+    let pumpRef = getPrice('submersible_pump_small');
     let pumpDescription = 'Submersible pump 7.5 kW class (Grundfos SE)';
     if (installedKW > 15) {
-      pumpUnitPrice = PUMP_LARGE_ZAR;
+      pumpRef = getPrice('submersible_pump_large');
       pumpDescription = 'Submersible pump 22 kW class (Grundfos SE)';
     } else if (installedKW > 7.5) {
-      pumpUnitPrice = PUMP_MEDIUM_ZAR;
+      pumpRef = getPrice('submersible_pump_medium');
       pumpDescription = 'Submersible pump 15 kW class (Grundfos SE)';
     }
+    const wetWellPrice = getPrice('civil_wet_well');
 
     const base = emptyUnitOutputs();
     base.sizing = {
@@ -94,19 +90,19 @@ export class InletPumping implements ProcessUnit {
           description: `Wet well reinforced concrete (${wetWellVolume.toFixed(1)} m³)`,
           quantity: wetWellVolume,
           unit: 'm3',
-          unitPriceZar: WET_WELL_ZAR_PER_M3,
-          sourceCitation: 'CH-ISE internal estimate 2026',
+          unitPriceZar: wetWellPrice.unitPriceZar,
+          sourceCitation: wetWellPrice.source,
         },
         {
           category: 'mechanical',
           description: pumpDescription,
           quantity: 2,
           unit: 'ea',
-          unitPriceZar: pumpUnitPrice,
-          sourceCitation: 'Grundfos SE range SA catalogue 2025',
+          unitPriceZar: pumpRef.unitPriceZar,
+          sourceCitation: pumpRef.source,
         },
       ],
-      total: wetWellVolume * WET_WELL_ZAR_PER_M3 + 2 * pumpUnitPrice,
+      total: wetWellVolume * wetWellPrice.unitPriceZar + 2 * pumpRef.unitPriceZar,
     };
     base.calculationRecords = [
       {
