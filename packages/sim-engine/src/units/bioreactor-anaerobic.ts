@@ -1,5 +1,5 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
-import { mixStreams, emptyWaterQuality } from '../types';
+import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
 
 const parameterSchema: ParameterField[] = [
   { key: 'volume', label: 'Volume', unit: 'm³', min: 100, max: 50000, step: 100, defaultValue: 1500 },
@@ -30,7 +30,7 @@ export class BioreactorAnaerobic implements ProcessUnit {
     const p = this.parameters;
 
     if (inf.flow <= 0) {
-      return { outputs: { out: emptyWaterQuality() }, metadata: {} };
+      return { outputs: { out: emptyWaterQuality() }, metadata: {}, ...emptyUnitOutputs() };
     }
 
     const volume = p.volume ?? 1500;
@@ -68,6 +68,7 @@ export class BioreactorAnaerobic implements ProcessUnit {
         VFA_consumed: vfaConsumed,
         P_released: pReleased,
       },
+      ...emptyUnitOutputs(),
     };
   }
 }
