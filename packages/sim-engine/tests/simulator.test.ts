@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { simulate } from '../src/graph/simulator';
 import { checkCompliance } from '../src/units/index';
 import type { GraphNode, GraphEdge } from '../src/graph/topological-sort';
-import type { WaterQuality, DischargeStandards } from '../src/types';
+import type { WaterQuality, DischargeStandards, ProcessResult } from '../src/types';
+import { assertValidV2Outputs } from './helpers/v2-outputs';
 
 // ── Conventional Activated Sludge Train ─────────────────────
 // Influent → Primary Clarifier → Aerobic Bioreactor → Secondary Clarifier → Effluent
@@ -140,6 +141,16 @@ describe('Simulator: Conventional AS', () => {
     // NH3 and TSS should pass with good nitrification and clarification
     expect(compliance.NH3N.pass).toBe(true);
     expect(compliance.TSS.pass).toBe(true);
+  });
+});
+
+describe('v2 outputs — full train', () => {
+  it('every node in a simulated conventional AS train emits v2 outputs', () => {
+    const { nodes, edges } = conventionalASFlowsheet();
+    const results = simulate(nodes, edges);
+    for (const nodeResult of Object.values(results.nodeResults)) {
+      assertValidV2Outputs(nodeResult as ProcessResult);
+    }
   });
 });
 
