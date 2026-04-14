@@ -213,6 +213,13 @@ describe('SecondaryClarifier', () => {
     const totalFlow = result.outputs.overflow.flow + result.outputs.underflow.flow;
     expect(totalFlow).toBeCloseTo(10000, 0);
   });
+
+  it('emits v2 extended outputs (empty defaults in Phase 1a)', () => {
+    const unit = new SecondaryClarifier({ surface_area: 800, tss_removal: 99.5, uo_ratio: 0.75 });
+    const input = { ...emptyWaterQuality(), flow: 1000, TSS: 3000, VSS: 2400 };
+    const result = unit.process([input]);
+    assertValidV2Outputs(result);
+  });
 });
 
 // ── Splitter ────────────────────────────────────────────────
