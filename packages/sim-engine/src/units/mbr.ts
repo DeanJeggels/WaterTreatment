@@ -1,10 +1,8 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { emptyWaterQuality, emptyUnitOutputs } from '../types';
+import { getPrice } from '@repo/design-library';
 
-// === Supplier price references (Phase 2 inline — Phase 3 moves to design-library) ===
-const MBR_MODULE_ZAR = 625000;
 const MBR_MODULE_AREA_M2 = 64;
-const MBR_CIP_SKID_ZAR = 380000;
 const MBR_DEFAULT_FLUX_LMH = 18.4;
 const MBR_OPERATIONAL_FRACTION = 0.8;
 
@@ -113,6 +111,8 @@ export class MBR implements ProcessUnit {
         },
       ],
     };
+    const modulePrice = getPrice('mbr_smu_module');
+    const cipPrice = getPrice('mbr_cip_skid');
     base.capex = {
       lineItems: [
         {
@@ -120,19 +120,19 @@ export class MBR implements ProcessUnit {
           description: `Megavision SMU membrane modules (${moduleCount} × ${modAreaPer} m²)`,
           quantity: moduleCount,
           unit: 'ea',
-          unitPriceZar: MBR_MODULE_ZAR,
-          sourceCitation: 'Megavision quote 2025',
+          unitPriceZar: modulePrice.unitPriceZar,
+          sourceCitation: modulePrice.source,
         },
         {
           category: 'mechanical',
           description: 'MBR CIP + permeate pump skid',
           quantity: 1,
           unit: 'ea',
-          unitPriceZar: MBR_CIP_SKID_ZAR,
-          sourceCitation: 'Megavision / Memstar typical 2025',
+          unitPriceZar: cipPrice.unitPriceZar,
+          sourceCitation: cipPrice.source,
         },
       ],
-      total: moduleCount * MBR_MODULE_ZAR + MBR_CIP_SKID_ZAR,
+      total: moduleCount * modulePrice.unitPriceZar + cipPrice.unitPriceZar,
     };
     base.calculationRecords = [
       {
