@@ -45,7 +45,7 @@ export class ChemicalDosing implements ProcessUnit {
     }
 
     const chemType = Math.max(0, Math.min(4, Math.round(p.chemical_type ?? 0)));
-    const chem = CHEMICAL_DATA[chemType];
+    const chem = CHEMICAL_DATA[chemType] ?? CHEMICAL_DATA[0]!;
     const dose_mg_L = Math.max(0, p.dose_mg_per_L ?? 0);
     const storageDays = Math.max(1, p.storage_days ?? 7);
 
