@@ -1,5 +1,5 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, DischargeStandards } from '../types';
-import { mixStreams } from '../types';
+import { mixStreams, emptyUnitOutputs } from '../types';
 
 export const effluentDefinition: UnitDefinition = {
   type: 'effluent',
@@ -23,6 +23,7 @@ export class Effluent implements ProcessUnit {
     return {
       outputs: { out: inf },
       metadata: {},
+      ...emptyUnitOutputs(),
     };
   }
 }
