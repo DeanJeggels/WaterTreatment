@@ -1,5 +1,5 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
-import { mixStreams, emptyWaterQuality } from '../types';
+import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
 
 const parameterSchema: ParameterField[] = [
   { key: 'surface_area', label: 'Surface Area', unit: 'm²', min: 50, max: 10000, step: 50, defaultValue: 800 },
@@ -32,7 +32,7 @@ export class SecondaryClarifier implements ProcessUnit {
 
     if (inf.flow <= 0) {
       const zero = emptyWaterQuality();
-      return { outputs: { overflow: zero, underflow: zero }, metadata: {} };
+      return { outputs: { overflow: zero, underflow: zero }, metadata: {}, ...emptyUnitOutputs() };
     }
 
     const tssR = (p.tss_removal ?? 99.5) / 100;
@@ -85,6 +85,7 @@ export class SecondaryClarifier implements ProcessUnit {
         underflow_TSS: underflow.TSS,
         overflow_TSS: overflow.TSS,
       },
+      ...emptyUnitOutputs(),
     };
   }
 }
