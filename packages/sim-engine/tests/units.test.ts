@@ -269,6 +269,13 @@ describe('Thickener', () => {
     // Thickened output should have higher TSS
     expect(result.outputs.thickened.TSS).toBeGreaterThan(5000);
   });
+
+  it('emits v2 extended outputs (empty defaults in Phase 1a)', () => {
+    const unit = new Thickener({});
+    const input = { ...emptyWaterQuality(), flow: 100, TSS: 10000 };
+    const result = unit.process([input]);
+    assertValidV2Outputs(result);
+  });
 });
 
 // ── Effluent + Compliance ───────────────────────────────────
