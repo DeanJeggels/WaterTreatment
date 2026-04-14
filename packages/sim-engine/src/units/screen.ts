@@ -1,16 +1,7 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { emptyWaterQuality, emptyUnitOutputs } from '../types';
+import { getPrice } from '@repo/design-library';
 
-// === Supplier price references (Phase 2 inline — Phase 3 moves to design-library) ===
-// Coarse mechanical bar rack (small plant)
-// Source: Typical SA supplier quote 2025 (Meva/Huber range)
-const COARSE_SCREEN_ZAR = 85000;
-// Huber ROTAMAT Ro5 or similar fine screen (small plant)
-// Source: Huber catalogue 2024 / typical SA distributor
-const FINE_SCREEN_ZAR = 450000;
-// Civil headworks channel (concrete)
-// Source: CH-ISE internal estimate 2026
-const CIVIL_CHANNEL_ZAR_PER_M3 = 15000;
 // Typical screenings production rates (L/ML)
 const COARSE_SCREENINGS_L_PER_ML = 40;
 const FINE_SCREENINGS_L_PER_ML = 15;
@@ -73,8 +64,12 @@ export class Screen implements ProcessUnit {
     const screenings_L_per_ML = isFine ? FINE_SCREENINGS_L_PER_ML : COARSE_SCREENINGS_L_PER_ML;
     const screenings_m3_per_d = (inf.flow / 1000) * (screenings_L_per_ML / 1000);
 
-    const screenPrice = isFine ? FINE_SCREEN_ZAR : COARSE_SCREEN_ZAR;
-    const civilCost = channelVolume * CIVIL_CHANNEL_ZAR_PER_M3;
+    const civilPrice = getPrice('civil_headworks_channel');
+    const screenPriceRef = isFine
+      ? getPrice('fine_step_screen_huber_rotamat')
+      : getPrice('coarse_bar_screen');
+    const screenings = getPrice('screenings_landfill_disposal');
+    const civilCost = channelVolume * civilPrice.unitPriceZar;
 
     const base = emptyUnitOutputs();
     base.sizing = {
@@ -90,26 +85,26 @@ export class Screen implements ProcessUnit {
           description: `Headworks concrete channel (${channelVolume.toFixed(1)} m³)`,
           quantity: channelVolume,
           unit: 'm3',
-          unitPriceZar: CIVIL_CHANNEL_ZAR_PER_M3,
-          sourceCitation: 'CH-ISE internal estimate 2026',
+          unitPriceZar: civilPrice.unitPriceZar,
+          sourceCitation: civilPrice.source,
         },
         {
           category: 'mechanical',
           description: isFine ? 'Fine step screen (Huber ROTAMAT Ro5 equivalent)' : 'Coarse mechanical bar rack',
           quantity: 1,
           unit: 'ea',
-          unitPriceZar: screenPrice,
-          sourceCitation: isFine ? 'Huber catalogue 2024 / SA distributor' : 'Typical SA supplier quote 2025 (Meva/Huber)',
+          unitPriceZar: screenPriceRef.unitPriceZar,
+          sourceCitation: screenPriceRef.source,
         },
       ],
-      total: civilCost + screenPrice,
+      total: civilCost + screenPriceRef.unitPriceZar,
     };
     base.consumables = [
       {
         item: 'Screenings disposal to landfill',
         daily: screenings_m3_per_d,
         unit: 'm3/d',
-        citation: 'Typical SA landfill rate 2025',
+        citation: screenings.source,
       },
     ];
     base.calculationRecords = [
