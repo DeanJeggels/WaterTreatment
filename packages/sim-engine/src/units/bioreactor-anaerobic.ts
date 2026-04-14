@@ -1,11 +1,7 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
+import { getPrice } from '@repo/design-library';
 
-// === Supplier price references (Phase 1b inline — Phase 3 moves to design-library) ===
-const CIVIL_CONCRETE_ZAR_PER_M3 = 18000;
-// Submersible mixer for anaerobic zone, ~3 kW
-// Source: Typical SA supplier quote 2025 (Grundfos SMD / Xylem Flygt range)
-const SUBMERSIBLE_MIXER_ZAR = 45000;
 // Rule of thumb: one 3 kW mixer per 500 m³ of anaerobic volume
 const MIXER_VOLUME_PER_UNIT_M3 = 500;
 const MIXER_KW_PER_UNIT = 3;
@@ -99,6 +95,8 @@ export class BioreactorAnaerobic implements ProcessUnit {
         },
       ],
     };
+    const civilPrice = getPrice('civil_concrete_reinforced');
+    const mixerPrice = getPrice('submersible_mixer_3kw');
     base.capex = {
       lineItems: [
         {
@@ -106,19 +104,19 @@ export class BioreactorAnaerobic implements ProcessUnit {
           description: `Anaerobic reactor reinforced concrete tank (${volume.toFixed(0)} m³)`,
           quantity: volume,
           unit: 'm3',
-          unitPriceZar: CIVIL_CONCRETE_ZAR_PER_M3,
-          sourceCitation: 'CH-ISE internal estimate 2026',
+          unitPriceZar: civilPrice.unitPriceZar,
+          sourceCitation: civilPrice.source,
         },
         {
           category: 'mechanical',
           description: `Submersible mixer 3kW × ${mixerCount}`,
           quantity: mixerCount,
           unit: 'ea',
-          unitPriceZar: SUBMERSIBLE_MIXER_ZAR,
-          sourceCitation: 'Typical SA supplier quote 2025 (Grundfos/Xylem range)',
+          unitPriceZar: mixerPrice.unitPriceZar,
+          sourceCitation: mixerPrice.source,
         },
       ],
-      total: volume * CIVIL_CONCRETE_ZAR_PER_M3 + mixerCount * SUBMERSIBLE_MIXER_ZAR,
+      total: volume * civilPrice.unitPriceZar + mixerCount * mixerPrice.unitPriceZar,
     };
     base.calculationRecords = [
       {
