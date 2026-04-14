@@ -1,5 +1,5 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
-import { mixStreams, emptyWaterQuality } from '../types';
+import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
 
 const parameterSchema: ParameterField[] = [
   { key: 'tss_removal', label: 'TSS Removal', unit: '%', min: 30, max: 90, step: 1, defaultValue: 60 },
@@ -36,7 +36,7 @@ export class PrimaryClarifier implements ProcessUnit {
 
     if (inf.flow <= 0) {
       const zero = emptyWaterQuality();
-      return { outputs: { overflow: zero, underflow: zero }, metadata: {} };
+      return { outputs: { overflow: zero, underflow: zero }, metadata: {}, ...emptyUnitOutputs() };
     }
 
     const tssR = (p.tss_removal ?? 60) / 100;
@@ -91,6 +91,7 @@ export class PrimaryClarifier implements ProcessUnit {
         surface_loading_rate: inf.flow / (p.surface_area ?? 500),
         hydraulic_retention_time: (p.surface_area ?? 500) * (p.depth ?? 3.5) / inf.flow * 24, // hours
       },
+      ...emptyUnitOutputs(),
     };
   }
 }

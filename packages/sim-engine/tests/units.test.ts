@@ -89,6 +89,13 @@ describe('PrimaryClarifier', () => {
     // Underflow should be small fraction
     expect(result.outputs.underflow.flow).toBeLessThan(1000);
   });
+
+  it('emits v2 extended outputs (empty defaults in Phase 1a)', () => {
+    const unit = new PrimaryClarifier({ tss_removal: 60, bod_removal: 30, cod_removal: 30, tkn_removal: 15, tp_removal: 10, surface_area: 500, depth: 3.5, uo_ratio: 0.05 });
+    const input = { ...emptyWaterQuality(), flow: 1000, TSS: 300 };
+    const result = unit.process([input]);
+    assertValidV2Outputs(result);
+  });
 });
 
 // ── Aerobic Bioreactor ──────────────────────────────────────
