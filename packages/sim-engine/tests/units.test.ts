@@ -14,6 +14,9 @@ import {
   createUnit,
   unitDefinitions,
   Screen,
+  GritRemoval,
+  EqualisationTank,
+  MBR,
 } from '../src/units/index';
 import { emptyWaterQuality, mixStreams } from '../src/types';
 import type { WaterQuality, UnitType } from '../src/types';
@@ -710,6 +713,93 @@ describe('Screen', () => {
     const unit = new Screen({ bar_spacing_mm: 20, approach_velocity_mps: 0.6, screen_type: 0 });
     const r = unit.process([{ ...emptyWaterQuality(), flow: 0 }]);
     expect(r.outputs.out.flow).toBe(0);
+  });
+});
+
+describe('GritRemoval', () => {
+  it('sizes at 3–5 min HRT on peak flow', () => {
+    const unit = new GritRemoval({ hrt_min: 4, peak_factor: 2.5 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 10000, TSS: 300 }]);
+    expect(r.sizing?.volume.value).toBeCloseTo((10000 * 2.5 * 4) / 1440, 1);
+  });
+
+  it('emits civil + grit equipment BoQ', () => {
+    const unit = new GritRemoval({ hrt_min: 4, peak_factor: 2.5 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 10000 }]);
+    expect(r.capex!.lineItems.find(i => i.category === 'civil')).toBeDefined();
+    expect(r.capex!.lineItems.find(i => i.category === 'mechanical')).toBeDefined();
+    expect(r.consumables?.find(c => /grit/i.test(c.item))).toBeDefined();
+    assertHasCalculationRecord(r.calculationRecords, 'HRT');
+    assertAllRecordsValid(r.calculationRecords);
+  });
+
+  it('handles zero flow gracefully', () => {
+    const unit = new GritRemoval({ hrt_min: 4, peak_factor: 2.5 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 0 }]);
+    expect(r.outputs.out.flow).toBe(0);
+  });
+});
+
+describe('EqualisationTank', () => {
+  it('sizes volume from user HRT', () => {
+    const unit = new EqualisationTank({ hrt_hours: 6 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000 }]);
+    expect(r.sizing?.volume.value).toBeCloseTo(250, 1);
+  });
+
+  it('passes water quality through unchanged', () => {
+    const unit = new EqualisationTank({ hrt_hours: 6 });
+    const inf = { ...emptyWaterQuality(), flow: 1000, COD: 600, TSS: 250 };
+    const r = unit.process([inf]);
+    expect(r.outputs.out.COD).toBe(600);
+    expect(r.outputs.out.TSS).toBe(250);
+  });
+
+  it('emits civil + mixer BoQ and mixing energy', () => {
+    const unit = new EqualisationTank({ hrt_hours: 6 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000 }]);
+    expect(r.energy?.installedKW).toBeGreaterThan(0);
+    expect(r.capex!.lineItems.find(i => i.category === 'civil')).toBeDefined();
+    expect(r.capex!.lineItems.find(i => i.category === 'mechanical')).toBeDefined();
+    assertHasCalculationRecord(r.calculationRecords, 'HRT');
+    assertAllRecordsValid(r.calculationRecords);
+  });
+});
+
+describe('MBR', () => {
+  it('sizes membrane area from flow and flux', () => {
+    const unit = new MBR({ flux_lmh: 18.4, operational_fraction: 0.8, module_area_m2: 64 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000, TSS: 3500 }]);
+    expect(r.sizing?.membraneArea).toBeDefined();
+    const expectedArea = (1000 * 1000) / (18.4 * 0.8 * 24);
+    // installedArea = moduleCount × 64; should be close to ceiling of expectedArea / 64
+    const expectedInstalled = Math.max(1, Math.ceil(expectedArea / 64)) * 64;
+    expect(r.sizing!.membraneArea.value).toBeCloseTo(expectedInstalled, 0);
+  });
+
+  it('produces near-particle-free permeate', () => {
+    const unit = new MBR({ flux_lmh: 18.4, operational_fraction: 0.8, module_area_m2: 64 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000, TSS: 3500 }]);
+    expect(r.outputs.permeate.TSS).toBeLessThan(5);
+  });
+
+  it('emits modules + CIP BoQ and air scour energy', () => {
+    const unit = new MBR({ flux_lmh: 18.4, operational_fraction: 0.8, module_area_m2: 64 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000, TSS: 3500 }]);
+    const modulesItem = r.capex!.lineItems.find(i => i.description.toLowerCase().includes('smu'));
+    const cipItem = r.capex!.lineItems.find(i => i.description.toLowerCase().includes('cip'));
+    expect(modulesItem).toBeDefined();
+    expect(cipItem).toBeDefined();
+    expect(r.energy?.installedKW).toBeGreaterThan(0);
+    assertHasCalculationRecord(r.calculationRecords, 'membrane area');
+    assertHasCalculationRecord(r.calculationRecords, 'air scour');
+    assertAllRecordsValid(r.calculationRecords);
+  });
+
+  it('handles zero flow gracefully', () => {
+    const unit = new MBR({ flux_lmh: 18.4, operational_fraction: 0.8, module_area_m2: 64 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 0 }]);
+    expect(r.outputs.permeate.flow).toBe(0);
   });
 });
 
