@@ -212,6 +212,37 @@ describe('BioreactorAerobic', () => {
   });
 });
 
+describe('BioreactorAerobic — Phase 1b', () => {
+  it('emits sizing, O2 demand records, civil + diffuser BoQ', () => {
+    const unit = new BioreactorAerobic({
+      volume: 5000, depth: 4.5, do_setpoint: 2.0,
+      srt: 12, yield_obs: 0.45, nitrification_eff: 95,
+      cod_removal_eff: 90, bod_removal_eff: 95, kd: 0.06,
+    });
+    const inf = { ...emptyWaterQuality(), flow: 10000, sCOD: 300, COD: 500, NH3N: 30, TKN: 40 };
+    const result = unit.process([inf]);
+
+    expect(result.sizing?.volume.value).toBe(5000);
+    expect(result.sizing?.HRT.value).toBeCloseTo((5000 / 10000) * 24, 1);
+    expect(result.sizing?.MLSS).toBeDefined();
+
+    assertHasCalculationRecord(result.calculationRecords, 'HRT');
+    assertHasCalculationRecord(result.calculationRecords, 'O2');
+    assertHasCalculationRecord(result.calculationRecords, 'MLSS');
+
+    const civil = result.capex!.lineItems.find(i => i.category === 'civil');
+    const diffusers = result.capex!.lineItems.find(i => i.description.toLowerCase().includes('diffuser'));
+    expect(civil).toBeDefined();
+    expect(diffusers).toBeDefined();
+    expect(diffusers!.quantity).toBeGreaterThan(0);
+    expect(result.capex!.total).toBeGreaterThan(0);
+
+    expect(result.energy?.installedKW).toBe(0);
+
+    assertAllRecordsValid(result.calculationRecords);
+  });
+});
+
 // ── Anoxic Bioreactor ───────────────────────────────────────
 describe('BioreactorAnoxic', () => {
   it('denitrifies NO3', () => {
@@ -234,6 +265,23 @@ describe('BioreactorAnoxic', () => {
   });
 });
 
+describe('BioreactorAnoxic — Phase 1b', () => {
+  it('emits sizing, energy, mixer BoQ, and denitrification capacity record', () => {
+    const unit = new BioreactorAnoxic({
+      volume: 2000, depth: 4.5, denitrification_eff: 85, cod_n_ratio: 6,
+    });
+    const inf = { ...emptyWaterQuality(), flow: 5000, sCOD: 300, NO3N: 15, TSS: 3500 };
+    const result = unit.process([inf]);
+    expect(result.sizing?.volume.value).toBe(2000);
+    expect(result.energy?.installedKW).toBeGreaterThan(0);
+    expect(result.capex!.lineItems.find(i => i.category === 'civil')).toBeDefined();
+    expect(result.capex!.lineItems.find(i => i.category === 'mechanical')).toBeDefined();
+    assertHasCalculationRecord(result.calculationRecords, 'HRT');
+    assertHasCalculationRecord(result.calculationRecords, 'denit');
+    assertAllRecordsValid(result.calculationRecords);
+  });
+});
+
 // ── Anaerobic Bioreactor ────────────────────────────────────
 describe('BioreactorAnaerobic', () => {
   it('releases phosphorus', () => {
@@ -249,6 +297,26 @@ describe('BioreactorAnaerobic', () => {
     const unit = new BioreactorAnaerobic({ volume: 1500, p_release_rate: 0.3, vfa_fraction: 0.2 });
     const result = unit.process([typicalInfluent()]);
     assertValidV2Outputs(result);
+  });
+});
+
+describe('BioreactorAnaerobic — Phase 1b', () => {
+  it('emits sizing, energy, mixer BoQ, and records', () => {
+    const unit = new BioreactorAnaerobic({
+      volume: 1500, depth: 4.5, p_release_rate: 0.3, vfa_fraction: 0.2,
+    });
+    const inf = { ...emptyWaterQuality(), flow: 5000, sCOD: 200, TP: 10 };
+    const result = unit.process([inf]);
+    expect(result.sizing?.volume.value).toBe(1500);
+    expect(result.sizing?.HRT.value).toBeCloseTo((1500 / 5000) * 24, 1);
+    expect(result.energy?.installedKW).toBeGreaterThan(0);
+    const civil = result.capex!.lineItems.find(i => i.category === 'civil');
+    const mech = result.capex!.lineItems.find(i => i.category === 'mechanical');
+    expect(civil).toBeDefined();
+    expect(mech).toBeDefined();
+    expect(mech!.description.toLowerCase()).toContain('mixer');
+    assertHasCalculationRecord(result.calculationRecords, 'HRT');
+    assertAllRecordsValid(result.calculationRecords);
   });
 });
 
