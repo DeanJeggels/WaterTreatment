@@ -1,11 +1,6 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
-
-// === Supplier price references (Phase 1b inline — Phase 3 moves to design-library) ===
-const CIVIL_CONCRETE_ZAR_PER_M3 = 18000;
-// Secondary clarifier traveling bridge / suction scraper
-// Source: Typical SA supplier quote 2025 (Andritz/Westech range)
-const SECONDARY_SCRAPER_ZAR = 320000;
+import { getPrice } from '@repo/design-library';
 
 const parameterSchema: ParameterField[] = [
   { key: 'surface_area', label: 'Surface Area', unit: 'm²', min: 50, max: 10000, step: 50, defaultValue: 800 },
@@ -100,6 +95,8 @@ export class SecondaryClarifier implements ProcessUnit {
       depth: { value: depth, unit: 'm' },
       volume: { value: volume, unit: 'm3' },
     };
+    const civilPrice = getPrice('civil_concrete_reinforced');
+    const scraperPrice = getPrice('secondary_clarifier_scraper_bridge');
     base.capex = {
       lineItems: [
         {
@@ -107,19 +104,19 @@ export class SecondaryClarifier implements ProcessUnit {
           description: `Secondary clarifier reinforced concrete tank (${volume.toFixed(0)} m³)`,
           quantity: volume,
           unit: 'm3',
-          unitPriceZar: CIVIL_CONCRETE_ZAR_PER_M3,
-          sourceCitation: 'CH-ISE internal estimate 2026',
+          unitPriceZar: civilPrice.unitPriceZar,
+          sourceCitation: civilPrice.source,
         },
         {
           category: 'mechanical',
           description: 'Secondary clarifier scraper / suction bridge',
           quantity: 1,
           unit: 'ea',
-          unitPriceZar: SECONDARY_SCRAPER_ZAR,
-          sourceCitation: 'Typical SA supplier quote 2025 (Andritz/Westech range)',
+          unitPriceZar: scraperPrice.unitPriceZar,
+          sourceCitation: scraperPrice.source,
         },
       ],
-      total: volume * CIVIL_CONCRETE_ZAR_PER_M3 + SECONDARY_SCRAPER_ZAR,
+      total: volume * civilPrice.unitPriceZar + scraperPrice.unitPriceZar,
     };
     base.calculationRecords = [
       {
