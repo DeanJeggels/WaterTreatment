@@ -16,6 +16,7 @@ import {
 import { emptyWaterQuality, mixStreams } from '../src/types';
 import type { WaterQuality } from '../src/types';
 import { assertValidV2Outputs } from './helpers/v2-outputs';
+import { assertHasCalculationRecord, assertAllRecordsValid } from './helpers/calculation-records';
 
 // ── Helper: typical raw wastewater ──────────────────────────
 function typicalInfluent(): WaterQuality {
@@ -48,6 +49,16 @@ describe('Influent', () => {
     const unit = new Influent({ flow: 1000, COD: 500, TSS: 250 });
     const result = unit.process([]);
     assertValidV2Outputs(result);
+  });
+
+  it('emits design-basis calculation records with citations', () => {
+    const unit = new Influent({ flow: 1000, COD: 500, TKN: 45, TSS: 250 });
+    const result = unit.process([]);
+    const flowRecord = assertHasCalculationRecord(result.calculationRecords, 'design flow');
+    expect(flowRecord.result.value).toBe(1000);
+    expect(flowRecord.result.unit).toBe('m3/d');
+    expect(flowRecord.citation).toContain('User input');
+    assertAllRecordsValid(result.calculationRecords);
   });
 });
 
