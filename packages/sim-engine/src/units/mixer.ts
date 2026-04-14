@@ -21,10 +21,37 @@ export class Mixer implements ProcessUnit {
 
   process(inputs: WaterQuality[]): ProcessResult {
     const mixed = mixStreams(inputs);
+
+    const base = emptyUnitOutputs();
+    const totalFlow = inputs.reduce((sum, s) => sum + s.flow, 0);
+    base.calculationRecords = [
+      {
+        label: 'Combined flow',
+        symbol: 'Qmix',
+        equation: 'Qmix = Σ Qi',
+        inputs: Object.fromEntries(
+          inputs.map((s, i) => [
+            `Q${i + 1}`,
+            { value: s.flow, unit: 'm3/d', source: `stream ${i + 1}` },
+          ]),
+        ),
+        result: { value: totalFlow, unit: 'm3/d' },
+        citation: 'Flow bookkeeping',
+      },
+      {
+        label: 'Flow-weighted COD',
+        symbol: 'CODmix',
+        equation: 'CODmix = Σ (Qi × CODi) / Σ Qi',
+        inputs: {},
+        result: { value: mixed.COD, unit: 'mg/L' },
+        citation: 'Mass balance — mixStreams() helper',
+      },
+    ];
+
     return {
       outputs: { out: mixed },
       metadata: { num_inputs: inputs.length },
-      ...emptyUnitOutputs(),
+      ...base,
     };
   }
 }
