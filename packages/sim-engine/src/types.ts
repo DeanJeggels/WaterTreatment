@@ -1,3 +1,5 @@
+export type { Dimension } from './types/dimension';
+
 /** Water quality vector carried by every stream in the flowsheet */
 export interface WaterQuality {
   flow: number;        // m³/d
