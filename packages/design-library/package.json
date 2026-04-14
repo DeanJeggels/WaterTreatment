@@ -1,5 +1,5 @@
 {
-  "name": "@repo/sim-engine",
+  "name": "@repo/design-library",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -17,8 +17,5 @@
     "@repo/typescript-config": "*",
     "vitest": "^3.0.0",
     "typescript": "5.9.2"
-  },
-  "dependencies": {
-    "@repo/design-library": "*"
   }
 }
