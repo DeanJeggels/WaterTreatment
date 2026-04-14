@@ -1,5 +1,5 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
-import { mixStreams } from '../types';
+import { mixStreams, emptyUnitOutputs } from '../types';
 
 const parameterSchema: ParameterField[] = [
   { key: 'split_ratio', label: 'Main Flow Ratio', unit: '', min: 0.01, max: 0.99, step: 0.01, defaultValue: 0.95, description: 'Fraction of flow to main output' },
@@ -33,6 +33,7 @@ export class Splitter implements ProcessUnit {
     return {
       outputs: { main, side },
       metadata: { split_ratio: ratio },
+      ...emptyUnitOutputs(),
     };
   }
 }
