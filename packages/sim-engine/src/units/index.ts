@@ -8,6 +8,7 @@ export { Splitter, splitterDefinition } from './splitter';
 export { Mixer, mixerDefinition } from './mixer';
 export { Thickener, thickenerDefinition } from './thickener';
 export { Effluent, effluentDefinition, checkCompliance } from './effluent';
+export { Screen, screenDefinition } from './screen';
 
 import type { ProcessUnit, UnitType, UnitDefinition } from '../types';
 import { Influent, influentDefinition } from './influent';
@@ -20,6 +21,7 @@ import { Splitter, splitterDefinition } from './splitter';
 import { Mixer, mixerDefinition } from './mixer';
 import { Thickener, thickenerDefinition } from './thickener';
 import { Effluent, effluentDefinition } from './effluent';
+import { Screen, screenDefinition } from './screen';
 
 /** Registry of all unit definitions */
 export const unitDefinitions: Record<UnitType, UnitDefinition> = {
@@ -33,8 +35,9 @@ export const unitDefinitions: Record<UnitType, UnitDefinition> = {
   mixer: mixerDefinition,
   thickener: thickenerDefinition,
   effluent: effluentDefinition,
+  // Phase 2
+  screen: screenDefinition,
   // Phase 2 stubs — to be replaced with real definitions
-  screen: { type: 'screen', label: 'Screen (stub)', description: 'stub', icon: 'filter', handles: [], defaultParameters: {}, parameterSchema: [] },
   grit_removal: { type: 'grit_removal', label: 'Grit removal (stub)', description: 'stub', icon: 'circle', handles: [], defaultParameters: {}, parameterSchema: [] },
   equalisation_tank: { type: 'equalisation_tank', label: 'Equalisation (stub)', description: 'stub', icon: 'square', handles: [], defaultParameters: {}, parameterSchema: [] },
   mbr: { type: 'mbr', label: 'MBR (stub)', description: 'stub', icon: 'layers', handles: [], defaultParameters: {}, parameterSchema: [] },
@@ -58,7 +61,7 @@ export function createUnit(type: UnitType, parameters: Record<string, number>): 
     case 'mixer': return new Mixer(parameters);
     case 'thickener': return new Thickener(parameters);
     case 'effluent': return new Effluent(parameters);
-    case 'screen':
+    case 'screen': return new Screen(parameters);
     case 'grit_removal':
     case 'equalisation_tank':
     case 'mbr':
