@@ -15,6 +15,7 @@ import {
 } from '../src/units/index';
 import { emptyWaterQuality, mixStreams } from '../src/types';
 import type { WaterQuality } from '../src/types';
+import { assertValidV2Outputs } from './helpers/v2-outputs';
 
 // ── Helper: typical raw wastewater ──────────────────────────
 function typicalInfluent(): WaterQuality {
@@ -41,6 +42,12 @@ describe('Influent', () => {
     const result = unit.process([]);
     expect(result.outputs.out.flow).toBe(10000);
     expect(result.outputs.out.COD).toBe(500);
+  });
+
+  it('emits v2 extended outputs (empty defaults in Phase 1a)', () => {
+    const unit = new Influent({ flow: 1000, COD: 500, TSS: 250 });
+    const result = unit.process([]);
+    assertValidV2Outputs(result);
   });
 });
 
