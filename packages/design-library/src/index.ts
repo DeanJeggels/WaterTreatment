@@ -1,3 +1,2 @@
-// @repo/design-library — Single source of truth for WWTP design references
-// (supplier prices, discharge standards, kinetic constants, SA typical influent)
-export {};
+export type { BoQCategory, SupplierPriceRef } from './types';
+export { SUPPLIER_PRICES, getPrice, getPricesByCategory } from './supplier-prices';
