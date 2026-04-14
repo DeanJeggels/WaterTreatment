@@ -12,6 +12,11 @@ export { Screen, screenDefinition } from './screen';
 export { GritRemoval, gritRemovalDefinition } from './grit-removal';
 export { EqualisationTank, equalisationTankDefinition } from './equalisation-tank';
 export { MBR, mbrDefinition } from './mbr';
+export { AerationBlower, aerationBlowerDefinition } from './aeration-blower';
+export { Dewatering, dewateringDefinition } from './dewatering';
+export { ChemicalDosing, chemicalDosingDefinition } from './chemical-dosing';
+export { UvDisinfection, uvDisinfectionDefinition } from './uv-disinfection';
+export { InletPumping, inletPumpingDefinition } from './inlet-pumping';
 
 import type { ProcessUnit, UnitType, UnitDefinition } from '../types';
 import { Influent, influentDefinition } from './influent';
@@ -28,6 +33,11 @@ import { Screen, screenDefinition } from './screen';
 import { GritRemoval, gritRemovalDefinition } from './grit-removal';
 import { EqualisationTank, equalisationTankDefinition } from './equalisation-tank';
 import { MBR, mbrDefinition } from './mbr';
+import { AerationBlower, aerationBlowerDefinition } from './aeration-blower';
+import { Dewatering, dewateringDefinition } from './dewatering';
+import { ChemicalDosing, chemicalDosingDefinition } from './chemical-dosing';
+import { UvDisinfection, uvDisinfectionDefinition } from './uv-disinfection';
+import { InletPumping, inletPumpingDefinition } from './inlet-pumping';
 
 /** Registry of all unit definitions */
 export const unitDefinitions: Record<UnitType, UnitDefinition> = {
@@ -46,12 +56,11 @@ export const unitDefinitions: Record<UnitType, UnitDefinition> = {
   grit_removal: gritRemovalDefinition,
   equalisation_tank: equalisationTankDefinition,
   mbr: mbrDefinition,
-  // Phase 2 stubs — to be replaced with real definitions
-  aeration_blower: { type: 'aeration_blower', label: 'Aeration blower (stub)', description: 'stub', icon: 'fan', handles: [], defaultParameters: {}, parameterSchema: [] },
-  dewatering: { type: 'dewatering', label: 'Dewatering (stub)', description: 'stub', icon: 'droplet', handles: [], defaultParameters: {}, parameterSchema: [] },
-  chemical_dosing: { type: 'chemical_dosing', label: 'Chemical dosing (stub)', description: 'stub', icon: 'beaker', handles: [], defaultParameters: {}, parameterSchema: [] },
-  uv_disinfection: { type: 'uv_disinfection', label: 'UV (stub)', description: 'stub', icon: 'sun', handles: [], defaultParameters: {}, parameterSchema: [] },
-  inlet_pumping: { type: 'inlet_pumping', label: 'Inlet pump (stub)', description: 'stub', icon: 'arrow-up', handles: [], defaultParameters: {}, parameterSchema: [] },
+  aeration_blower: aerationBlowerDefinition,
+  dewatering: dewateringDefinition,
+  chemical_dosing: chemicalDosingDefinition,
+  uv_disinfection: uvDisinfectionDefinition,
+  inlet_pumping: inletPumpingDefinition,
 };
 
 /** Create a ProcessUnit instance from type and parameters */
@@ -71,11 +80,10 @@ export function createUnit(type: UnitType, parameters: Record<string, number>): 
     case 'grit_removal': return new GritRemoval(parameters);
     case 'equalisation_tank': return new EqualisationTank(parameters);
     case 'mbr': return new MBR(parameters);
-    case 'aeration_blower':
-    case 'dewatering':
-    case 'chemical_dosing':
-    case 'uv_disinfection':
-    case 'inlet_pumping':
-      throw new Error(`Unit type "${type}" not yet implemented (Phase 2 in progress)`);
+    case 'aeration_blower': return new AerationBlower(parameters);
+    case 'dewatering': return new Dewatering(parameters);
+    case 'chemical_dosing': return new ChemicalDosing(parameters);
+    case 'uv_disinfection': return new UvDisinfection(parameters);
+    case 'inlet_pumping': return new InletPumping(parameters);
   }
 }
