@@ -165,6 +165,12 @@ describe('BioreactorAnoxic', () => {
     const result = unit.process([nitrifiedFeed]);
     expect(result.outputs.out.NO3N).toBeLessThan(22);
   });
+
+  it('emits v2 extended outputs (empty defaults in Phase 1a)', () => {
+    const unit = new BioreactorAnoxic({ volume: 2000, denitrification_eff: 85, cod_n_ratio: 6 });
+    const result = unit.process([typicalInfluent()]);
+    assertValidV2Outputs(result);
+  });
 });
 
 // ── Anaerobic Bioreactor ────────────────────────────────────
