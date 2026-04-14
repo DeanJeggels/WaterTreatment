@@ -1,4 +1,6 @@
 export type { Dimension } from './types/dimension';
+export type { CalculationRecord } from './types/calculation-record';
+export { isValidCalculationRecord } from './types/calculation-record';
 
 /** Water quality vector carried by every stream in the flowsheet */
 export interface WaterQuality {
