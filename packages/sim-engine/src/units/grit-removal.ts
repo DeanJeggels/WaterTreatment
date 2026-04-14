@@ -1,11 +1,7 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { emptyWaterQuality, emptyUnitOutputs } from '../types';
+import { getPrice } from '@repo/design-library';
 
-// === Supplier price references (Phase 2 inline — Phase 3 moves to design-library) ===
-const CIVIL_CONCRETE_ZAR_PER_M3 = 18000;
-// Grit pump + cyclone separator + air diffusers
-// Source: Typical SA supplier quote 2025
-const GRIT_EQUIPMENT_ZAR = 180000;
 // Typical grit production (m³ / ML influent)
 const GRIT_M3_PER_ML = 0.015;
 
@@ -75,6 +71,9 @@ export class GritRemoval implements ProcessUnit {
         },
       ],
     };
+    const civilPrice = getPrice('civil_concrete_reinforced');
+    const equipmentPrice = getPrice('grit_removal_package');
+    const gritDisposal = getPrice('grit_landfill_disposal');
     base.capex = {
       lineItems: [
         {
@@ -82,26 +81,26 @@ export class GritRemoval implements ProcessUnit {
           description: `Aerated grit chamber civils (${volume.toFixed(1)} m³)`,
           quantity: volume,
           unit: 'm3',
-          unitPriceZar: CIVIL_CONCRETE_ZAR_PER_M3,
-          sourceCitation: 'CH-ISE internal estimate 2026',
+          unitPriceZar: civilPrice.unitPriceZar,
+          sourceCitation: civilPrice.source,
         },
         {
           category: 'mechanical',
           description: 'Grit pump + cyclone + air diffusers',
           quantity: 1,
           unit: 'ea',
-          unitPriceZar: GRIT_EQUIPMENT_ZAR,
-          sourceCitation: 'Typical SA supplier quote 2025',
+          unitPriceZar: equipmentPrice.unitPriceZar,
+          sourceCitation: equipmentPrice.source,
         },
       ],
-      total: volume * CIVIL_CONCRETE_ZAR_PER_M3 + GRIT_EQUIPMENT_ZAR,
+      total: volume * civilPrice.unitPriceZar + equipmentPrice.unitPriceZar,
     };
     base.consumables = [
       {
         item: 'Grit disposal to landfill',
         daily: gritProd,
         unit: 'm3/d',
-        citation: 'Typical SA landfill rate 2025',
+        citation: gritDisposal.source,
       },
     ];
     base.calculationRecords = [
