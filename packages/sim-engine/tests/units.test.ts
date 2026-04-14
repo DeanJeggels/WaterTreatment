@@ -257,6 +257,13 @@ describe('Effluent', () => {
     expect(result.outputs.out.flow).toBe(10000);
     expect(result.outputs.out.COD).toBe(500);
   });
+
+  it('emits v2 extended outputs (empty defaults in Phase 1a)', () => {
+    const unit = new Effluent({});
+    const input = { ...emptyWaterQuality(), flow: 500, COD: 50 };
+    const result = unit.process([input]);
+    assertValidV2Outputs(result);
+  });
 });
 
 describe('checkCompliance', () => {
