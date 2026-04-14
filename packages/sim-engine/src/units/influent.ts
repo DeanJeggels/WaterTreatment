@@ -1,4 +1,5 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
+import { emptyUnitOutputs } from '../types';
 
 const parameterSchema: ParameterField[] = [
   { key: 'flow', label: 'Flow', unit: 'm³/d', min: 1, max: 1000000, step: 100, defaultValue: 10000 },
@@ -55,6 +56,7 @@ export class Influent implements ProcessUnit {
     return {
       outputs: { out: output },
       metadata: {},
+      ...emptyUnitOutputs(),
     };
   }
 }
