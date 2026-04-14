@@ -1,2 +1,8 @@
 export type { BoQCategory, SupplierPriceRef } from './types';
 export { SUPPLIER_PRICES, getPrice, getPricesByCategory } from './supplier-prices';
+export type { DwaDischargeStandard } from './dwa-limits';
+export { DWA_LIMITS, getDwaLimits } from './dwa-limits';
+export type { KineticConstants } from './kinetic-constants';
+export { KINETIC_CONSTANTS, adjustForTemperature } from './kinetic-constants';
+export type { TypicalInfluent } from './defaults';
+export { SA_TYPICAL_INFLUENT } from './defaults';
