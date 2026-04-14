@@ -149,6 +149,15 @@ describe('BioreactorAerobic', () => {
     expect(result.outputs.out.NH3N).toBeCloseTo(25, 0);
     expect(result.outputs.out.NO3N).toBeCloseTo(0.5, 0);
   });
+
+  it('emits v2 extended outputs (empty defaults in Phase 1a)', () => {
+    const unit = new BioreactorAerobic({
+      volume: 5000, do_setpoint: 2, srt: 12, yield_obs: 0.45,
+      nitrification_eff: 95, cod_removal_eff: 90, bod_removal_eff: 95, kd: 0.06,
+    });
+    const result = unit.process([typicalInfluent()]);
+    assertValidV2Outputs(result);
+  });
 });
 
 // ── Anoxic Bioreactor ───────────────────────────────────────
