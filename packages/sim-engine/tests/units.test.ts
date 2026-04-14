@@ -177,6 +177,12 @@ describe('BioreactorAnaerobic', () => {
     // TP should increase (P release in anaerobic zone)
     expect(result.outputs.out.TP).toBeGreaterThanOrEqual(typicalInfluent().TP);
   });
+
+  it('emits v2 extended outputs (empty defaults in Phase 1a)', () => {
+    const unit = new BioreactorAnaerobic({ volume: 1500, p_release_rate: 0.3, vfa_fraction: 0.2 });
+    const result = unit.process([typicalInfluent()]);
+    assertValidV2Outputs(result);
+  });
 });
 
 // ── Secondary Clarifier ─────────────────────────────────────
