@@ -1,16 +1,14 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { emptyWaterQuality, emptyUnitOutputs } from '../types';
+import { getPrice } from '@repo/design-library';
 
-// === Supplier price references (Phase 2 inline — Phase 3 moves to design-library) ===
-const METERING_PUMP_ZAR = 28000;
-const HDPE_TANK_ZAR_PER_M3 = 17500;
-
-const CHEMICAL_DATA: Record<number, { name: string; price: number; density: number }> = {
-  0: { name: 'Alum (Al2(SO4)3)', price: 8, density: 1.32 },
-  1: { name: 'Ferric chloride', price: 12, density: 1.42 },
-  2: { name: 'Cationic polymer', price: 65, density: 1.0 },
-  3: { name: 'Hydrated lime', price: 4, density: 2.24 },
-  4: { name: 'Caustic soda (50%)', price: 10, density: 1.52 },
+/** Chemistry metadata (density is a physical property — not a supplier price) */
+const CHEMICAL_META: Record<number, { priceId: string; density: number }> = {
+  0: { priceId: 'alum_sulphate', density: 1.32 },
+  1: { priceId: 'ferric_chloride', density: 1.42 },
+  2: { priceId: 'polymer_cationic_dry', density: 1.0 },
+  3: { priceId: 'hydrated_lime', density: 2.24 },
+  4: { priceId: 'caustic_soda_50pct', density: 1.52 },
 };
 
 const parameterSchema: ParameterField[] = [
@@ -45,12 +43,13 @@ export class ChemicalDosing implements ProcessUnit {
     }
 
     const chemType = Math.max(0, Math.min(4, Math.round(p.chemical_type ?? 0)));
-    const chem = CHEMICAL_DATA[chemType] ?? CHEMICAL_DATA[0]!;
+    const meta = CHEMICAL_META[chemType] ?? CHEMICAL_META[0]!;
+    const chemPrice = getPrice(meta.priceId);
     const dose_mg_L = Math.max(0, p.dose_mg_per_L ?? 0);
     const storageDays = Math.max(1, p.storage_days ?? 7);
 
     const dailyKg = (dose_mg_L * inf.flow) / 1000;
-    const tankVolume_m3 = Math.max(0.5, (dailyKg * storageDays) / (chem.density * 1000));
+    const tankVolume_m3 = Math.max(0.5, (dailyKg * storageDays) / (meta.density * 1000));
 
     // WQ effects — coagulants remove P, alkaline chemicals raise pH
     const isCoagulant = chemType === 0 || chemType === 1;
@@ -69,6 +68,8 @@ export class ChemicalDosing implements ProcessUnit {
       tankVolume: { value: tankVolume_m3, unit: 'm3' },
       dailyConsumption: { value: dailyKg, unit: 'kg/d' },
     };
+    const pumpPrice = getPrice('metering_pump_diaphragm');
+    const tankPrice = getPrice('hdpe_storage_tank');
     base.capex = {
       lineItems: [
         {
@@ -76,26 +77,26 @@ export class ChemicalDosing implements ProcessUnit {
           description: 'Diaphragm metering pump (Grundfos DDA class)',
           quantity: 2,
           unit: 'ea',
-          unitPriceZar: METERING_PUMP_ZAR,
-          sourceCitation: 'Grundfos SA catalogue 2025',
+          unitPriceZar: pumpPrice.unitPriceZar,
+          sourceCitation: pumpPrice.source,
         },
         {
           category: 'civil',
           description: `HDPE storage tank (${tankVolume_m3.toFixed(1)} m³)`,
           quantity: tankVolume_m3,
           unit: 'm3',
-          unitPriceZar: HDPE_TANK_ZAR_PER_M3,
-          sourceCitation: 'Typical SA supplier 2025',
+          unitPriceZar: tankPrice.unitPriceZar,
+          sourceCitation: tankPrice.source,
         },
       ],
-      total: 2 * METERING_PUMP_ZAR + tankVolume_m3 * HDPE_TANK_ZAR_PER_M3,
+      total: 2 * pumpPrice.unitPriceZar + tankVolume_m3 * tankPrice.unitPriceZar,
     };
     base.consumables = [
       {
-        item: chem.name,
+        item: chemPrice.description,
         daily: dailyKg,
         unit: 'kg/d',
-        citation: `SA chemical distributor 2025 — ${chem.price} ZAR/kg`,
+        citation: chemPrice.source,
       },
     ];
     base.calculationRecords = [
@@ -117,7 +118,7 @@ export class ChemicalDosing implements ProcessUnit {
         inputs: {
           D: { value: dailyKg, unit: 'kg/d', source: 'daily dose' },
           storage_days: { value: storageDays, unit: 'd', source: 'user input' },
-          rho: { value: chem.density, unit: 'kg/L', source: 'chemical density' },
+          rho: { value: meta.density, unit: 'kg/L', source: 'chemical density' },
         },
         result: { value: tankVolume_m3, unit: 'm3' },
         citation: 'WISA guideline — 7 d storage typical',
