@@ -13,6 +13,7 @@ import {
   checkCompliance,
   createUnit,
   unitDefinitions,
+  Screen,
 } from '../src/units/index';
 import { emptyWaterQuality, mixStreams } from '../src/types';
 import type { WaterQuality, UnitType } from '../src/types';
@@ -660,6 +661,55 @@ describe('mixStreams', () => {
     const result = mixStreams([a, b]);
     expect(result.flow).toBe(10000);
     expect(result.COD).toBeCloseTo(140, 0);
+  });
+});
+
+describe('Screen', () => {
+  describe('Coarse variant', () => {
+    it('constructs with default parameters', () => {
+      const unit = new Screen({ bar_spacing_mm: 20, approach_velocity_mps: 0.6, screen_type: 0 });
+      expect(unit.type).toBe('screen');
+    });
+
+    it('passes flow through with minimal WQ change', () => {
+      const unit = new Screen({ bar_spacing_mm: 20, approach_velocity_mps: 0.6, screen_type: 0 });
+      const inf = { ...emptyWaterQuality(), flow: 1000, TSS: 300, COD: 500 };
+      const r = unit.process([inf]);
+      expect(r.outputs.out.flow).toBeCloseTo(1000, 1);
+      expect(r.outputs.out.COD).toBeCloseTo(500, 1);
+      expect(r.outputs.out.TSS).toBeLessThan(300);
+      expect(r.outputs.out.TSS).toBeGreaterThan(290);
+    });
+
+    it('emits sizing, BoQ, and calculation records', () => {
+      const unit = new Screen({ bar_spacing_mm: 20, approach_velocity_mps: 0.6, screen_type: 0 });
+      const r = unit.process([{ ...emptyWaterQuality(), flow: 1000 }]);
+      expect(r.sizing?.channelArea).toBeDefined();
+      expect(r.sizing?.headLoss).toBeDefined();
+      assertHasCalculationRecord(r.calculationRecords, 'channel area');
+      assertHasCalculationRecord(r.calculationRecords, 'head loss');
+      expect(r.capex!.lineItems.length).toBeGreaterThan(0);
+      expect(r.capex!.total).toBeGreaterThan(0);
+      expect(r.consumables?.length).toBeGreaterThan(0);
+      assertAllRecordsValid(r.calculationRecords);
+    });
+  });
+
+  describe('Fine variant', () => {
+    it('uses a different supplier price line than coarse', () => {
+      const coarse = new Screen({ bar_spacing_mm: 20, approach_velocity_mps: 0.6, screen_type: 0 });
+      const fine = new Screen({ bar_spacing_mm: 3, approach_velocity_mps: 0.6, screen_type: 1 });
+      const inf = { ...emptyWaterQuality(), flow: 1000 };
+      const rCoarse = coarse.process([inf]);
+      const rFine = fine.process([inf]);
+      expect(rFine.capex!.total).toBeGreaterThan(rCoarse.capex!.total);
+    });
+  });
+
+  it('handles zero flow gracefully', () => {
+    const unit = new Screen({ bar_spacing_mm: 20, approach_velocity_mps: 0.6, screen_type: 0 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 0 }]);
+    expect(r.outputs.out.flow).toBe(0);
   });
 });
 
