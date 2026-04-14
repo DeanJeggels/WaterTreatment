@@ -1,3 +1,8 @@
+import type { Dimension } from './types/dimension';
+import type { CalculationRecord } from './types/calculation-record';
+import type { BoQLineItem } from './types/boq-line-item';
+import type { ConsumableItem } from './types/consumable-item';
+
 export type { Dimension } from './types/dimension';
 export type { CalculationRecord } from './types/calculation-record';
 export { isValidCalculationRecord } from './types/calculation-record';
@@ -27,10 +32,35 @@ export interface WaterQuality {
   temperature: number; // °C
 }
 
-/** Result from processing a unit — multiple named output streams + metadata */
+/**
+ * Result from processing a unit — the existing `outputs` and `metadata`
+ * fields are kept for backward compatibility. The new optional fields
+ * (sizing, energy, consumables, capex, calculationRecords, warnings)
+ * are the v2 extension — populated with empty defaults by all existing
+ * units during Phase 1a, with real values to follow in Phase 1b.
+ */
 export interface ProcessResult {
   outputs: Record<string, WaterQuality>;
   metadata: Record<string, number>;
+  /** v2 — sizing dimensions */
+  sizing?: Record<string, Dimension>;
+  /** v2 — energy demand */
+  energy?: {
+    installedKW: number;
+    dailyKWh: number;
+    records: CalculationRecord[];
+  };
+  /** v2 — daily consumables */
+  consumables?: ConsumableItem[];
+  /** v2 — Bill of Quantities contribution */
+  capex?: {
+    lineItems: BoQLineItem[];
+    total: number;
+  };
+  /** v2 — full auditable calculation trail */
+  calculationRecords?: CalculationRecord[];
+  /** v2 — warnings raised during calculation */
+  warnings?: string[];
 }
 
 /** Handle definition for node connections */
