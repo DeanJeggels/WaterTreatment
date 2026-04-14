@@ -4,6 +4,8 @@ export { isValidCalculationRecord } from './types/calculation-record';
 export type { BoQLineItem, BoQCategory } from './types/boq-line-item';
 export { BOQ_CATEGORIES, isValidBoQLineItem } from './types/boq-line-item';
 export type { ConsumableItem } from './types/consumable-item';
+export type { PlantContext } from './types/plant-context';
+export { defaultPlantContext } from './types/plant-context';
 
 /** Water quality vector carried by every stream in the flowsheet */
 export interface WaterQuality {
