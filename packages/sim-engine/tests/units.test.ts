@@ -17,6 +17,11 @@ import {
   GritRemoval,
   EqualisationTank,
   MBR,
+  AerationBlower,
+  Dewatering,
+  ChemicalDosing,
+  UvDisinfection,
+  InletPumping,
 } from '../src/units/index';
 import { emptyWaterQuality, mixStreams } from '../src/types';
 import type { WaterQuality, UnitType } from '../src/types';
@@ -800,6 +805,139 @@ describe('MBR', () => {
     const unit = new MBR({ flux_lmh: 18.4, operational_fraction: 0.8, module_area_m2: 64 });
     const r = unit.process([{ ...emptyWaterQuality(), flow: 0 }]);
     expect(r.outputs.permeate.flow).toBe(0);
+  });
+});
+
+describe('AerationBlower', () => {
+  it('computes air flow from O2 demand', () => {
+    const unit = new AerationBlower({ o2_demand_kg_per_day: 500, ote: 0.08, diffuser_depth_m: 4.5 });
+    const r = unit.process([]);
+    expect(r.sizing?.airFlow.value).toBeGreaterThan(500);
+    expect(r.sizing?.airFlow.value).toBeLessThan(20000);
+  });
+
+  it('picks PD blower for small demand', () => {
+    const unit = new AerationBlower({ o2_demand_kg_per_day: 80, ote: 0.08, diffuser_depth_m: 4.5 });
+    const r = unit.process([]);
+    const mech = r.capex!.lineItems.find(i => i.category === 'mechanical');
+    expect(mech!.description.toLowerCase()).toContain('pd');
+  });
+
+  it('picks HST turbo for large demand', () => {
+    const unit = new AerationBlower({ o2_demand_kg_per_day: 5000, ote: 0.08, diffuser_depth_m: 4.5 });
+    const r = unit.process([]);
+    const mech = r.capex!.lineItems.find(i => i.category === 'mechanical');
+    expect(mech!.description.toLowerCase()).toContain('hst');
+  });
+
+  it('emits energy records and BoQ with citation', () => {
+    const unit = new AerationBlower({ o2_demand_kg_per_day: 500, ote: 0.08, diffuser_depth_m: 4.5 });
+    const r = unit.process([]);
+    expect(r.energy?.installedKW).toBeGreaterThan(0);
+    expect(r.energy?.dailyKWh).toBeGreaterThan(0);
+    assertHasCalculationRecord(r.calculationRecords, 'air flow');
+    assertHasCalculationRecord(r.calculationRecords, 'blower power');
+    assertAllRecordsValid(r.calculationRecords);
+  });
+});
+
+describe('Dewatering', () => {
+  it('produces cake at target solids concentration', () => {
+    const unit = new Dewatering({ dewatering_type: 0, polymer_dose_kg_per_tds: 6 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 50, TSS: 50000 }]);
+    expect(r.outputs.cake.TSS).toBeGreaterThan(150000);
+  });
+
+  it('returns filtrate with most water and some dissolved nutrients', () => {
+    const unit = new Dewatering({ dewatering_type: 0, polymer_dose_kg_per_tds: 6 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 50, TSS: 50000 }]);
+    expect(r.outputs.filtrate.flow).toBeGreaterThan(30);
+    expect(r.outputs.filtrate.TSS).toBeLessThan(5000);
+  });
+
+  it('emits polymer consumable and cake disposal', () => {
+    const unit = new Dewatering({ dewatering_type: 0, polymer_dose_kg_per_tds: 6 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 50, TSS: 50000 }]);
+    expect(r.consumables?.find(c => /polymer/i.test(c.item))).toBeDefined();
+    expect(r.consumables?.find(c => /cake|disposal/i.test(c.item))).toBeDefined();
+  });
+
+  it('picks centrifuge BoQ line when type=1', () => {
+    const unit = new Dewatering({ dewatering_type: 1, polymer_dose_kg_per_tds: 6 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 50, TSS: 50000 }]);
+    const mech = r.capex!.lineItems.find(i => /centrifuge/i.test(i.description));
+    expect(mech).toBeDefined();
+  });
+});
+
+describe('ChemicalDosing', () => {
+  it('computes daily chemical consumption from dose and flow', () => {
+    const unit = new ChemicalDosing({ chemical_type: 0, dose_mg_per_L: 30, storage_days: 7 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000 }]);
+    const chem = r.consumables?.find(c => /alum/i.test(c.item));
+    expect(chem).toBeDefined();
+    expect(chem!.daily).toBeCloseTo(30, 1);
+  });
+
+  it('applies P removal when chemical is coagulant (alum/ferric)', () => {
+    const unit = new ChemicalDosing({ chemical_type: 0, dose_mg_per_L: 50, storage_days: 7 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000, TP: 10 }]);
+    expect(r.outputs.out.TP).toBeLessThan(10);
+  });
+
+  it('emits metering pump + tank BoQ', () => {
+    const unit = new ChemicalDosing({ chemical_type: 0, dose_mg_per_L: 30, storage_days: 7 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000 }]);
+    expect(r.capex!.lineItems.find(i => /pump/i.test(i.description))).toBeDefined();
+    expect(r.capex!.lineItems.find(i => /tank/i.test(i.description))).toBeDefined();
+    assertHasCalculationRecord(r.calculationRecords, 'daily dose');
+  });
+});
+
+describe('UvDisinfection', () => {
+  it('sizes lamp count from flow', () => {
+    const unit = new UvDisinfection({ required_dose_mj_cm2: 40 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000 }]);
+    expect(r.sizing?.lampCount.value).toBe(5);
+    expect(r.energy?.installedKW).toBeCloseTo(5 * 0.25, 2);
+  });
+
+  it('picks larger reactor BoQ line for higher flow', () => {
+    const small = new UvDisinfection({ required_dose_mj_cm2: 40 });
+    const large = new UvDisinfection({ required_dose_mj_cm2: 40 });
+    const rSmall = small.process([{ ...emptyWaterQuality(), flow: 400 }]);
+    const rLarge = large.process([{ ...emptyWaterQuality(), flow: 3000 }]);
+    expect(rLarge.capex!.total).toBeGreaterThan(rSmall.capex!.total);
+  });
+
+  it('passes flow through unchanged', () => {
+    const unit = new UvDisinfection({ required_dose_mj_cm2: 40 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000, COD: 50 }]);
+    expect(r.outputs.out.flow).toBe(1000);
+    expect(r.outputs.out.COD).toBe(50);
+  });
+});
+
+describe('InletPumping', () => {
+  it('sizes kW from TDH and peak flow', () => {
+    const unit = new InletPumping({ tdh_m: 10, pump_efficiency: 0.7, peak_factor: 2.5 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000 }]);
+    expect(r.energy?.installedKW).toBeGreaterThan(3);
+    expect(r.energy?.installedKW).toBeLessThan(6);
+  });
+
+  it('includes duty + standby in BoQ (quantity = 2)', () => {
+    const unit = new InletPumping({ tdh_m: 10, pump_efficiency: 0.7, peak_factor: 2.5 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000 }]);
+    const pumps = r.capex!.lineItems.find(i => /pump/i.test(i.description));
+    expect(pumps).toBeDefined();
+    expect(pumps!.quantity).toBe(2);
+  });
+
+  it('passes water quality through unchanged', () => {
+    const unit = new InletPumping({ tdh_m: 10, pump_efficiency: 0.7, peak_factor: 2.5 });
+    const r = unit.process([{ ...emptyWaterQuality(), flow: 1000, COD: 600 }]);
+    expect(r.outputs.out.COD).toBe(600);
   });
 });
 
