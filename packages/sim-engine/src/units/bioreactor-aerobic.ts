@@ -1,11 +1,7 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
+import { getPrice } from '@repo/design-library';
 
-// === Supplier price references (Phase 1b inline — Phase 3 moves to design-library) ===
-const CIVIL_CONCRETE_ZAR_PER_M3 = 18000;
-// Fine bubble diffuser, 9" EDI FlexAir tubular
-// Source: EDI FlexAir catalogue 2024, typical SA distributor quote
-const EDI_FLEXAIR_9IN_ZAR = 850;
 // Diffuser density rule of thumb: ~1 diffuser per 3 m³ reactor volume (fine bubble grid)
 const DIFFUSER_PER_M3 = 1 / 3;
 
@@ -142,6 +138,8 @@ export class BioreactorAerobic implements ProcessUnit {
         },
       ],
     };
+    const civilPrice = getPrice('civil_concrete_reinforced');
+    const diffuserPrice = getPrice('fine_bubble_diffuser_edi_9in');
     base.capex = {
       lineItems: [
         {
@@ -149,19 +147,19 @@ export class BioreactorAerobic implements ProcessUnit {
           description: `Aerobic reactor reinforced concrete tank (${volume.toFixed(0)} m³)`,
           quantity: volume,
           unit: 'm3',
-          unitPriceZar: CIVIL_CONCRETE_ZAR_PER_M3,
-          sourceCitation: 'CH-ISE internal estimate 2026',
+          unitPriceZar: civilPrice.unitPriceZar,
+          sourceCitation: civilPrice.source,
         },
         {
           category: 'mechanical',
           description: `9" fine bubble diffusers (EDI FlexAir) × ${diffuserCount}`,
           quantity: diffuserCount,
           unit: 'ea',
-          unitPriceZar: EDI_FLEXAIR_9IN_ZAR,
-          sourceCitation: 'EDI FlexAir catalogue 2024 / typical SA distributor',
+          unitPriceZar: diffuserPrice.unitPriceZar,
+          sourceCitation: diffuserPrice.source,
         },
       ],
-      total: volume * CIVIL_CONCRETE_ZAR_PER_M3 + diffuserCount * EDI_FLEXAIR_9IN_ZAR,
+      total: volume * civilPrice.unitPriceZar + diffuserCount * diffuserPrice.unitPriceZar,
     };
     base.calculationRecords = [
       {
