@@ -9,6 +9,9 @@ export { Mixer, mixerDefinition } from './mixer';
 export { Thickener, thickenerDefinition } from './thickener';
 export { Effluent, effluentDefinition, checkCompliance } from './effluent';
 export { Screen, screenDefinition } from './screen';
+export { GritRemoval, gritRemovalDefinition } from './grit-removal';
+export { EqualisationTank, equalisationTankDefinition } from './equalisation-tank';
+export { MBR, mbrDefinition } from './mbr';
 
 import type { ProcessUnit, UnitType, UnitDefinition } from '../types';
 import { Influent, influentDefinition } from './influent';
@@ -22,6 +25,9 @@ import { Mixer, mixerDefinition } from './mixer';
 import { Thickener, thickenerDefinition } from './thickener';
 import { Effluent, effluentDefinition } from './effluent';
 import { Screen, screenDefinition } from './screen';
+import { GritRemoval, gritRemovalDefinition } from './grit-removal';
+import { EqualisationTank, equalisationTankDefinition } from './equalisation-tank';
+import { MBR, mbrDefinition } from './mbr';
 
 /** Registry of all unit definitions */
 export const unitDefinitions: Record<UnitType, UnitDefinition> = {
@@ -37,10 +43,10 @@ export const unitDefinitions: Record<UnitType, UnitDefinition> = {
   effluent: effluentDefinition,
   // Phase 2
   screen: screenDefinition,
+  grit_removal: gritRemovalDefinition,
+  equalisation_tank: equalisationTankDefinition,
+  mbr: mbrDefinition,
   // Phase 2 stubs — to be replaced with real definitions
-  grit_removal: { type: 'grit_removal', label: 'Grit removal (stub)', description: 'stub', icon: 'circle', handles: [], defaultParameters: {}, parameterSchema: [] },
-  equalisation_tank: { type: 'equalisation_tank', label: 'Equalisation (stub)', description: 'stub', icon: 'square', handles: [], defaultParameters: {}, parameterSchema: [] },
-  mbr: { type: 'mbr', label: 'MBR (stub)', description: 'stub', icon: 'layers', handles: [], defaultParameters: {}, parameterSchema: [] },
   aeration_blower: { type: 'aeration_blower', label: 'Aeration blower (stub)', description: 'stub', icon: 'fan', handles: [], defaultParameters: {}, parameterSchema: [] },
   dewatering: { type: 'dewatering', label: 'Dewatering (stub)', description: 'stub', icon: 'droplet', handles: [], defaultParameters: {}, parameterSchema: [] },
   chemical_dosing: { type: 'chemical_dosing', label: 'Chemical dosing (stub)', description: 'stub', icon: 'beaker', handles: [], defaultParameters: {}, parameterSchema: [] },
@@ -62,9 +68,9 @@ export function createUnit(type: UnitType, parameters: Record<string, number>): 
     case 'thickener': return new Thickener(parameters);
     case 'effluent': return new Effluent(parameters);
     case 'screen': return new Screen(parameters);
-    case 'grit_removal':
-    case 'equalisation_tank':
-    case 'mbr':
+    case 'grit_removal': return new GritRemoval(parameters);
+    case 'equalisation_tank': return new EqualisationTank(parameters);
+    case 'mbr': return new MBR(parameters);
     case 'aeration_blower':
     case 'dewatering':
     case 'chemical_dosing':
