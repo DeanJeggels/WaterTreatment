@@ -3,6 +3,7 @@
 import {
   Droplets, Cylinder, Wind, Moon, FlaskConical, Triangle,
   GitBranch, Merge, Funnel, Waves,
+  Filter, Circle, Square, Layers, Fan, Droplet, Beaker, Sun, ArrowUp,
 } from 'lucide-react';
 import type { UnitType } from '@repo/sim-engine';
 import { unitDefinitions } from '@repo/sim-engine';
@@ -19,18 +20,36 @@ const iconMap: Record<UnitType, React.ComponentType<{ className?: string }>> = {
   mixer: Merge,
   thickener: Funnel,
   effluent: Waves,
+  screen: Filter,
+  grit_removal: Circle,
+  equalisation_tank: Square,
+  mbr: Layers,
+  aeration_blower: Fan,
+  dewatering: Droplet,
+  chemical_dosing: Beaker,
+  uv_disinfection: Sun,
+  inlet_pumping: ArrowUp,
 };
 
 const unitTypes: UnitType[] = [
   'influent',
+  'inlet_pumping',
+  'screen',
+  'grit_removal',
+  'equalisation_tank',
   'primary_clarifier',
-  'bioreactor_aerobic',
-  'bioreactor_anoxic',
   'bioreactor_anaerobic',
+  'bioreactor_anoxic',
+  'bioreactor_aerobic',
+  'aeration_blower',
+  'mbr',
   'secondary_clarifier',
+  'thickener',
+  'dewatering',
+  'chemical_dosing',
+  'uv_disinfection',
   'splitter',
   'mixer',
-  'thickener',
   'effluent',
 ];
 

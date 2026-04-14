@@ -5,6 +5,7 @@ import { Handle, Position } from '@xyflow/react';
 import {
   Droplets, Cylinder, Wind, Moon, FlaskConical, Triangle,
   GitBranch, Merge, Funnel, Waves,
+  Filter, Circle, Square, Layers, Fan, Droplet, Beaker, Sun, ArrowUp,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -28,6 +29,15 @@ const iconMap: Record<UnitType, React.ComponentType<{ className?: string }>> = {
   mixer: Merge,
   thickener: Funnel,
   effluent: Waves,
+  screen: Filter,
+  grit_removal: Circle,
+  equalisation_tank: Square,
+  mbr: Layers,
+  aeration_blower: Fan,
+  dewatering: Droplet,
+  chemical_dosing: Beaker,
+  uv_disinfection: Sun,
+  inlet_pumping: ArrowUp,
 };
 
 const wqDisplayKeys: { key: keyof WaterQuality; label: string; unit: string }[] = [
