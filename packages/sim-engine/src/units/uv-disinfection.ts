@@ -1,10 +1,7 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { emptyWaterQuality, emptyUnitOutputs } from '../types';
+import { getPrice } from '@repo/design-library';
 
-// === Supplier price references (Phase 2 inline — Phase 3 moves to design-library) ===
-const UV_REACTOR_SMALL_ZAR = 285000;
-const UV_REACTOR_MEDIUM_ZAR = 650000;
-const UV_REACTOR_LARGE_ZAR = 1250000;
 const LP_HO_LAMP_KW = 0.25;
 const Q_PER_LAMP_M3_D = 200;
 
@@ -42,13 +39,13 @@ export class UvDisinfection implements ProcessUnit {
     const installedKW = lampCount * LP_HO_LAMP_KW;
     const dailyKWh = installedKW * 24;
 
-    let reactorPrice = UV_REACTOR_SMALL_ZAR;
+    let reactorRef = getPrice('uv_reactor_small');
     let reactorDescription = 'LP-HO UV reactor (small, <500 m³/d)';
     if (inf.flow >= 1500) {
-      reactorPrice = UV_REACTOR_LARGE_ZAR;
+      reactorRef = getPrice('uv_reactor_large');
       reactorDescription = 'LP-HO UV reactor (large, 1500-5000 m³/d)';
     } else if (inf.flow >= 500) {
-      reactorPrice = UV_REACTOR_MEDIUM_ZAR;
+      reactorRef = getPrice('uv_reactor_medium');
       reactorDescription = 'LP-HO UV reactor (medium, 500-1500 m³/d)';
     }
 
@@ -81,11 +78,11 @@ export class UvDisinfection implements ProcessUnit {
           description: reactorDescription,
           quantity: 1,
           unit: 'ea',
-          unitPriceZar: reactorPrice,
-          sourceCitation: 'Xylem Wedeco catalogue 2025',
+          unitPriceZar: reactorRef.unitPriceZar,
+          sourceCitation: reactorRef.source,
         },
       ],
-      total: reactorPrice,
+      total: reactorRef.unitPriceZar,
     };
     base.calculationRecords = [
       {
