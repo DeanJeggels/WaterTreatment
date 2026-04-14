@@ -52,3 +52,11 @@ export {
 export { simulate } from './graph/simulator';
 export { topologicalSort } from './graph/topological-sort';
 export type { GraphNode, GraphEdge } from './graph/topological-sort';
+
+// BoQ engine
+export { aggregateBoQ } from './boq/aggregator';
+export type {
+  FlowsheetNodeLite,
+  BoQOverride,
+  AggregatedBoQ,
+} from './boq/aggregator';
