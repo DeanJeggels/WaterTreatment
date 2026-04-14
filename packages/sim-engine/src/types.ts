@@ -1,6 +1,8 @@
 export type { Dimension } from './types/dimension';
 export type { CalculationRecord } from './types/calculation-record';
 export { isValidCalculationRecord } from './types/calculation-record';
+export type { BoQLineItem, BoQCategory } from './types/boq-line-item';
+export { BOQ_CATEGORIES, isValidBoQLineItem } from './types/boq-line-item';
 
 /** Water quality vector carried by every stream in the flowsheet */
 export interface WaterQuality {
