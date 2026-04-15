@@ -139,7 +139,7 @@ export interface DischargeStandards {
 
 /** Simulation results for the entire flowsheet */
 export interface SimulationResults {
-  nodeResults: Record<string, { outputs: Record<string, WaterQuality>; metadata: Record<string, number> }>;
+  nodeResults: Record<string, ProcessResult>;
   edgeResults: Record<string, WaterQuality>;
   converged: boolean;
   iterations: number;
