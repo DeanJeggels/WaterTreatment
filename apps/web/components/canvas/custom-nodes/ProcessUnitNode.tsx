@@ -66,16 +66,16 @@ function ProcessUnitNode({ id, data, selected }: { id: string; data: FlowsheetNo
     : undefined;
 
   // Determine border color based on simulation state
-  let borderColor = 'border-border hover:border-primary/50'; // gray: not simulated
+  let borderColor = 'border-border hover:border-primary/50'; // not simulated
   if (selected) {
     borderColor = 'border-primary shadow-lg shadow-primary/20';
   } else if (nodeResult && data.unitType === 'effluent' && compliance) {
     const allPass = Object.values(compliance).every(c => c.pass);
     borderColor = allPass
-      ? 'border-green-500 shadow-md shadow-green-500/20'
-      : 'border-red-500 shadow-md shadow-red-500/20';
+      ? 'border-primary shadow-md shadow-primary/20'
+      : 'border-destructive shadow-md shadow-destructive/20';
   } else if (nodeResult) {
-    borderColor = 'border-green-500/50';
+    borderColor = 'border-primary/50';
   }
 
   const nodeContent = (

@@ -84,15 +84,21 @@ export default function Canvas() {
         defaultEdgeOptions={{
           animated: true,
           type: 'smoothstep',
-          style: { stroke: '#94a3b8', strokeWidth: 2 },
+          style: { strokeWidth: 2 },
         }}
       >
-        <Controls className="!bg-card !border-border" />
+        <Controls className="!bg-card !border-border !text-foreground" />
         <MiniMap
           className="!bg-card !border-border"
-          nodeColor="hsl(var(--primary))"
+          nodeColor="var(--primary)"
+          maskColor="var(--muted)"
         />
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="hsl(var(--border))" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={1}
+          color="var(--canvas-dots)"
+        />
       </ReactFlow>
     </div>
   );
