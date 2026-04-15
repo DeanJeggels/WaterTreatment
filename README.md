@@ -1,159 +1,120 @@
-# Turborepo starter
+# AquaSim
 
-This Turborepo starter is maintained by the Turborepo core team.
+**Wastewater design & proposal generator** for consulting engineers.
 
-## Using this example
+From wastewater sample to client-ready design proposal in one tool.
+Drag-and-drop flowsheet editor, auditable calculations with published-literature
+citations, real South African supplier prices, DWA compliance checking,
+and one-click proposal PDF export via browser print.
 
-Run the following command:
+---
 
-```sh
-npx create-turbo@latest
+## What's in the box
+
+- **19 process units** covering a full biological WWTP: screens, grit, equalisation,
+  primary and secondary clarifiers, MLE / UCT / MBR biological reactors, thickeners,
+  dewatering, chemical dosing, UV disinfection, inlet pumping, aeration blowers
+- **Auditable calculations** — every derived number carries its equation, inputs,
+  result, and citation (Ekama, WRC TT-16/84, Metcalf & Eddy, supplier datasheets)
+- **Bill of Quantities engine** with real SA supplier prices from Huber, Megavision,
+  Sulzer, Grundfos, Andritz, Alfa Laval, Xylem Wedeco, and others
+- **DWA General + Special discharge limits** built in, effluent pass/fail per parameter
+- **11-section proposal document**: cover, executive summary, design basis, process
+  description, sizing calculations, aeration design, energy analysis, consumables,
+  Bill of Quantities, effluent compliance, disclaimer
+- **Browser print-to-PDF** — no server-side rendering, no PDF dependencies
+- **Dark mode by default**, tablet responsive, WCAG AA contrast
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router), React 19, TypeScript 5 |
+| Styling | Tailwind CSS v4 (CSS-native config), shadcn/ui |
+| Canvas | React Flow (@xyflow/react) |
+| State | Zustand (flowsheet, simulation, project stores) |
+| Backend | Supabase (Postgres + Auth + RLS + Edge Functions) |
+| Billing | Stripe (Free / Pro / Enterprise tiers) |
+| Hosting | Netlify with @netlify/plugin-nextjs |
+| Monorepo | Turborepo |
+| Tests | Vitest (134 passing — 118 sim-engine + 16 design-library) |
+
+## Monorepo layout
+
+```
+aquasim/
+├── apps/
+│   └── web/                     # Next.js app — landing, auth, dashboard, flowsheet + proposal editors
+├── packages/
+│   ├── sim-engine/              # Pure TS sim engine: 19 unit models, graph simulator, BoQ aggregator
+│   └── design-library/          # SA reference data: supplier prices, DWA limits, kinetic constants
+├── docs/
+│   ├── WWTP Design.xlsm         # Source spreadsheet — the original Marais-Ekama calculator
+│   └── plans/                   # All v2 rebuild plans + completion summaries
+├── supabase/
+│   └── migrations/              # Versioned SQL migrations (4 applied in Phase 4)
+└── netlify.toml
 ```
 
-## What's inside?
+## Running locally
 
-This Turborepo includes the following packages/apps:
+```bash
+# Install
+npm install
 
-### Apps and Packages
+# Dev server (on http://localhost:3000)
+npx turbo run dev --filter=web
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+# Run tests
+cd packages/sim-engine && npx vitest run
+cd packages/design-library && npx vitest run
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+# Build
+npx turbo run build --filter=web
 ```
 
-Without global `turbo`, use your package manager:
+## Environment variables
 
-```sh
-cd my-turborepo
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+Set in `apps/web/.env.local` and Netlify dashboard:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://otikhvpmjijwgnabxspd.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+STRIPE_SECRET_KEY=<Stripe secret key>          # optional — Pro tier disabled if missing
+STRIPE_PRO_PRICE_ID=<Stripe price ID for Pro>  # optional
+STRIPE_ENTERPRISE_PRICE_ID=<Stripe price ID>   # optional
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Supabase project
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+`otikhvpmjijwgnabxspd` (ATA, CH-ISE org).
 
-```sh
-turbo build --filter=docs
-```
+**Tables**: `profiles`, `organizations`, `org_members`, `projects`, `flowsheets`,
+`simulation_runs` (deprecated), `templates`, `share_links`, `boq_line_items` (new in v2),
+`project_proposals` (new in v2).
 
-Without global `turbo`:
+**Edge functions**: `generate-report` (legacy, unused in v2), `stripe-webhook`.
 
-```sh
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## The v2 rebuild
 
-### Develop
+AquaSim v2 was a 9-phase rebuild on the `v2-proposal-generator` branch. Each
+phase has a plan document and a completion summary in `docs/plans/`.
 
-To develop all apps and packages, run the following command:
+| Phase | Scope | Output |
+|---|---|---|
+| 1a | Sim-engine interface refactor | Non-breaking `ProcessResult` extension with v2 fields |
+| 1b | Real sizing/energy/BoQ on the 10 existing units | Every unit emits calculation records with citations |
+| 2 | 9 new unit models | Screens, grit, equalisation, MBR, aeration blower, dewatering, dosing, UV, inlet pumping |
+| 3 | BoQ engine + @repo/design-library | `aggregateBoQ()`, 28 supplier-price entries, DWA limits, kinetic constants |
+| 4 | Supabase schema migrations | `boq_line_items`, `project_proposals`, extended `flowsheets` + `profiles` |
+| 5 | UI design system overhaul | Phase 5 tokens, theme toggle, layout primitives, canvas polish |
+| 6 | Inspector redesign | `CalculationRecordCard` centerpiece, 8 section components |
+| 7 | Proposal view + PDF generation | 11-section live document, `@media print` styling, Save BoQ + Generate PDF |
+| 8 | Landing page rewrite | Hero, features, process units, pricing copy pivot |
+| 9 | Merge & deploy | This phase |
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+**Test count progression:** 41 → 51 → 74 → 108 → 134 combined.
 
-```sh
-cd my-turborepo
-turbo dev
-```
+## License
 
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+Proprietary. CH-ISE (PTY) LTD, South Africa.
