@@ -3,40 +3,46 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Droplets, GitBranch, BarChart3, FileText, Shield, Users,
-  CheckCircle, ArrowRight, Zap, Crown,
+  GitBranch, FileText, CheckCircle, ArrowRight, Zap, Crown,
+  Calculator, Receipt, ClipboardCheck, Layers,
 } from 'lucide-react';
 
 const features = [
   {
-    icon: Droplets,
-    title: 'Drag-and-Drop Design',
-    description: 'Build wastewater treatment flowsheets with 10 process units — influent, clarifiers, bioreactors, splitters, mixers, and more.',
-  },
-  {
     icon: GitBranch,
-    title: 'Real-Time Simulation',
-    description: 'Client-side mass balance engine with recycle stream convergence. Results in under 100ms for typical flowsheets.',
+    title: 'Drag-and-drop flowsheet editor',
+    description:
+      '19 process units — screens, clarifiers, bioreactors, MBR, thickeners, dewatering, dosing, UV, pumps. Connect them on a canvas, set parameters, run the mass balance.',
   },
   {
-    icon: BarChart3,
-    title: 'Compliance Checking',
-    description: 'Compare effluent quality against configurable discharge standards. Instant pass/fail on COD, BOD, NH3-N, TSS, and TP.',
+    icon: Calculator,
+    title: 'Every number is defensible',
+    description:
+      'Sizing, energy, and BoQ values come with the equation, the inputs, and a citation to published literature (Ekama, WRC, Metcalf & Eddy, supplier datasheets). Click any value in the inspector to see the derivation.',
+  },
+  {
+    icon: Receipt,
+    title: 'Real SA supplier prices',
+    description:
+      'Huber, Megavision, Sulzer, Grundfos, Andritz, Alfa Laval, Xylem Wedeco — every BoQ line item is priced from a real supplier catalogue or quote, not a textbook placeholder.',
+  },
+  {
+    icon: ClipboardCheck,
+    title: 'DWA compliance, built in',
+    description:
+      'Every effluent stream is checked against the National Water Act General and Special limits. Pass/fail per parameter, with the exact citation, right in the proposal.',
   },
   {
     icon: FileText,
-    title: 'PDF Reports',
-    description: 'Generate professional simulation reports with flowsheet summaries, water quality tables, and compliance results.',
+    title: 'Client proposals in one click',
+    description:
+      'From simulated flowsheet to a formatted 11-section design report: cover, executive summary, design basis, sizing calculations, aeration design, energy, consumables, Bill of Quantities, effluent compliance, disclaimer. Browser print-to-PDF — no uploads.',
   },
   {
-    icon: Shield,
-    title: '14 WQ Parameters',
-    description: 'Track flow, COD, sCOD, BOD5, TKN, NH3-N, NO3-N, TP, TSS, VSS, pH, alkalinity, DO, and temperature at every point.',
-  },
-  {
-    icon: Users,
-    title: 'Share & Collaborate',
-    description: 'Create view-only share links for clients and colleagues. Enterprise plans include full team workspaces.',
+    icon: Layers,
+    title: 'Full biological train coverage',
+    description:
+      'Preliminary treatment through sludge handling: bar screens, grit, equalisation, primary and secondary clarification, MLE / UCT / MBR, thickeners, dewatering, chemical dosing, UV disinfection, inlet pumping. Every unit carries its own sizing, energy, and CapEx.',
   },
 ];
 
@@ -45,34 +51,77 @@ const tiers = [
     name: 'Free',
     price: '$0',
     period: 'forever',
-    description: 'For students and evaluation',
-    features: ['3 projects', '8 units per flowsheet', '1 scenario per project', '20 sim runs/day'],
-    cta: 'Get Started',
+    description: 'For students and first projects',
+    features: [
+      '3 projects',
+      '8 units per flowsheet',
+      'Full flowsheet editor',
+      'Mass balance + compliance checks',
+      'No proposal PDF export',
+    ],
+    cta: 'Start free',
     highlighted: false,
   },
   {
     name: 'Pro',
     price: '$49',
     period: '/month',
-    description: 'For consulting engineers',
-    features: ['Unlimited projects', '50 units per flowsheet', '10 scenarios per project', 'Unlimited simulations', 'PDF reports'],
-    cta: 'Start Pro Trial',
+    description: 'For consulting engineers in practice',
+    features: [
+      'Unlimited projects',
+      '50 units per flowsheet',
+      'Everything in Free, plus:',
+      'One-click proposal PDF',
+      'Save & version BoQ per project',
+      'Override supplier prices per project',
+      'Full calculation audit trail',
+    ],
+    cta: 'Start Pro trial',
     highlighted: true,
   },
   {
     name: 'Enterprise',
     price: '$199',
     period: '/month',
-    description: 'For teams & municipalities',
-    features: ['Everything in Pro', 'Unlimited units', 'Unlimited scenarios', 'Team sharing & workspaces', 'API access'],
-    cta: 'Contact Sales',
+    description: 'For teams and municipal engineering departments',
+    features: [
+      'Everything in Pro, plus:',
+      'Unlimited units per flowsheet',
+      'Team workspaces & shared price libraries',
+      'Company branding on proposals',
+      'API access',
+      'Priority support',
+    ],
+    cta: 'Contact sales',
     highlighted: false,
   },
 ];
 
-const processUnits = [
-  'Influent', 'Primary Clarifier', 'Aerobic Bioreactor', 'Anoxic Zone',
-  'Anaerobic Zone', 'Secondary Clarifier', 'Splitter', 'Mixer', 'Thickener', 'Effluent',
+const processUnits: { category: string; units: string[] }[] = [
+  {
+    category: 'Preliminary',
+    units: ['Coarse Screen', 'Fine Screen', 'Grit Removal', 'Equalisation Tank', 'Inlet Pumping'],
+  },
+  {
+    category: 'Primary',
+    units: ['Primary Clarifier'],
+  },
+  {
+    category: 'Biological',
+    units: ['Anaerobic Reactor', 'Anoxic Reactor', 'Aerobic Reactor', 'MBR', 'Aeration Blower'],
+  },
+  {
+    category: 'Secondary & Tertiary',
+    units: ['Secondary Clarifier', 'UV Disinfection', 'Chemical Dosing'],
+  },
+  {
+    category: 'Sludge',
+    units: ['Thickener', 'Dewatering'],
+  },
+  {
+    category: 'Flow & Utility',
+    units: ['Influent', 'Effluent', 'Splitter', 'Mixer'],
+  },
 ];
 
 export default function LandingPage() {
@@ -99,48 +148,57 @@ export default function LandingPage() {
       <section className="py-24 px-4">
         <div className="container mx-auto text-center max-w-3xl">
           <Badge variant="secondary" className="mb-4 text-xs">
-            Web-based wastewater process simulator
+            Wastewater design & proposal generator
           </Badge>
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
             Design. Simulate.{' '}
-            <span className="text-primary">Comply.</span>
+            <span className="text-primary">Deliver.</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Build wastewater treatment flowsheets, run mass balance simulations,
-            and verify discharge compliance — all in your browser. No installation required.
+            From wastewater sample to client-ready design proposal in the same tool.
+            Auditable calculations, real South African supplier prices, and one-click PDF export.
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link href="/register">
               <Button size="lg" className="text-base px-8">
-                Start Free
+                Start free
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <Link href="/login">
               <Button size="lg" variant="outline" className="text-base px-8">
-                Sign In
+                Sign in
               </Button>
             </Link>
           </div>
           <p className="text-sm text-muted-foreground mt-4">
-            Free tier includes 3 projects. No credit card required.
+            Free tier includes 3 projects. No credit card required. Built for SA consulting engineers.
           </p>
         </div>
       </section>
 
       {/* Process Units */}
-      <section className="py-8 border-y border-border/50 bg-card/50">
+      <section className="py-12 border-y border-border/50 bg-card/50">
         <div className="container mx-auto px-4">
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {processUnits.map((unit, i) => (
-              <span key={unit} className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <span className="bg-primary/10 text-primary px-2.5 py-1 rounded-md text-xs font-medium">
-                  {unit}
-                </span>
-                {i < processUnits.length - 1 && (
-                  <ArrowRight className="h-3 w-3 text-muted-foreground/30" />
-                )}
-              </span>
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold mb-1">19 process units covered</h2>
+            <p className="text-sm text-muted-foreground">
+              From headworks to sludge disposal — everything you need for a full biological plant design.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {processUnits.map(({ category, units }) => (
+              <div key={category}>
+                <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">{category}</h3>
+                <ul className="space-y-1">
+                  {units.map((unit) => (
+                    <li key={unit} className="flex items-center gap-2 text-sm">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                      <span className="text-foreground">{unit}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
           </div>
         </div>
@@ -230,14 +288,14 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="py-24 px-4">
         <div className="container mx-auto text-center max-w-2xl">
-          <h2 className="text-3xl font-bold mb-4">Ready to modernize your process design?</h2>
+          <h2 className="text-3xl font-bold mb-4">Stop building proposals in Word.</h2>
           <p className="text-muted-foreground mb-8">
-            Join engineers who have moved from desktop software to the cloud.
-            Design flowsheets, simulate treatment, and verify compliance — anywhere.
+            AquaSim collapses the design-to-deliverable cycle into a single tool.
+            Your calculations, your Bill of Quantities, and your client proposal — one workflow, one export.
           </p>
           <Link href="/register">
             <Button size="lg" className="text-base px-8">
-              Create Your Free Account
+              Create your free account
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
@@ -248,7 +306,7 @@ export default function LandingPage() {
       <footer className="border-t border-border/50 py-8 px-4">
         <div className="container mx-auto flex items-center justify-between text-sm text-muted-foreground">
           <span>AquaSim by CH-ISE (PTY) LTD</span>
-          <span>Wastewater Treatment Process Simulator</span>
+          <span>Wastewater design & proposal generator</span>
         </div>
       </footer>
     </div>

@@ -1,5 +1,5 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
-import { mixStreams } from '../types';
+import { mixStreams, emptyUnitOutputs } from '../types';
 
 const parameterSchema: ParameterField[] = [
   { key: 'split_ratio', label: 'Main Flow Ratio', unit: '', min: 0.01, max: 0.99, step: 0.01, defaultValue: 0.95, description: 'Fraction of flow to main output' },
@@ -30,9 +30,36 @@ export class Splitter implements ProcessUnit {
     const main: WaterQuality = { ...inf, flow: inf.flow * ratio };
     const side: WaterQuality = { ...inf, flow: inf.flow * (1 - ratio) };
 
+    const base = emptyUnitOutputs();
+    base.calculationRecords = [
+      {
+        label: 'Split flow to main',
+        symbol: 'Qmain',
+        equation: 'Qmain = Q × r',
+        inputs: {
+          Q: { value: inf.flow, unit: 'm3/d', source: 'inlet flow' },
+          r: { value: ratio, unit: '', source: 'split ratio parameter' },
+        },
+        result: { value: inf.flow * ratio, unit: 'm3/d' },
+        citation: 'Flow bookkeeping',
+      },
+      {
+        label: 'Split flow to side',
+        symbol: 'Qside',
+        equation: 'Qside = Q × (1 − r)',
+        inputs: {
+          Q: { value: inf.flow, unit: 'm3/d', source: 'inlet flow' },
+          r: { value: ratio, unit: '', source: 'split ratio parameter' },
+        },
+        result: { value: inf.flow * (1 - ratio), unit: 'm3/d' },
+        citation: 'Flow bookkeeping',
+      },
+    ];
+
     return {
       outputs: { main, side },
       metadata: { split_ratio: ratio },
+      ...base,
     };
   }
 }

@@ -1,5 +1,5 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, DischargeStandards } from '../types';
-import { mixStreams } from '../types';
+import { mixStreams, emptyUnitOutputs } from '../types';
 
 export const effluentDefinition: UnitDefinition = {
   type: 'effluent',
@@ -18,11 +18,64 @@ export class Effluent implements ProcessUnit {
   constructor(public parameters: Record<string, number>) {}
 
   process(inputs: WaterQuality[]): ProcessResult {
-    const inf = mixStreams(inputs);
+    const mixed = mixStreams(inputs);
+
+    const base = emptyUnitOutputs();
+    base.calculationRecords = [
+      {
+        label: 'Effluent flow',
+        symbol: 'Qe',
+        equation: 'Qe = Q (full pass-through)',
+        inputs: { Q: { value: mixed.flow, unit: 'm3/d', source: 'inlet stream' } },
+        result: { value: mixed.flow, unit: 'm3/d' },
+        citation: 'Mass balance',
+      },
+      {
+        label: 'Effluent COD',
+        symbol: 'CODe',
+        equation: 'CODe from final reactor/clarifier stream',
+        inputs: {},
+        result: { value: mixed.COD, unit: 'mg/L' },
+        citation: 'Simulated — compare to DWA limit',
+      },
+      {
+        label: 'Effluent NH3-N (Nae)',
+        symbol: 'Nae',
+        equation: 'Nae from final reactor effluent',
+        inputs: {},
+        result: { value: mixed.NH3N, unit: 'mgN/L' },
+        citation: 'Ekama (1984) eq 4.11 (nitrification)',
+      },
+      {
+        label: 'Effluent NO3-N (Nne)',
+        symbol: 'Nne',
+        equation: 'Nne = Nc / (a + s + 1)',
+        inputs: {},
+        result: { value: mixed.NO3N, unit: 'mgN/L' },
+        citation: 'Ekama (1984) eq 4.18 (denitrification)',
+      },
+      {
+        label: 'Effluent TSS',
+        symbol: 'TSSe',
+        equation: 'TSSe from final clarifier overflow',
+        inputs: {},
+        result: { value: mixed.TSS, unit: 'mg/L' },
+        citation: 'Simulated — compare to DWA limit',
+      },
+      {
+        label: 'Effluent TP',
+        symbol: 'TPe',
+        equation: 'TPe from final reactor/clarifier stream',
+        inputs: {},
+        result: { value: mixed.TP, unit: 'mgP/L' },
+        citation: 'Simulated — compare to DWA limit',
+      },
+    ];
 
     return {
-      outputs: { out: inf },
+      outputs: { out: mixed },
       metadata: {},
+      ...base,
     };
   }
 }

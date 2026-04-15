@@ -5,9 +5,7 @@ import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ReactFlowProvider, ReactFlow, Background, Controls } from '@xyflow/react';
 import ProcessUnitNode from '@/components/canvas/custom-nodes/ProcessUnitNode';
-import ResultsPanel from '@/components/results/ResultsPanel';
 import { useFlowsheetStore } from '@/stores/flowsheet-store';
-import { useSimulationStore } from '@/stores/simulation-store';
 import { Loader2 } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 

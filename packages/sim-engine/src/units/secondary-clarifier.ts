@@ -1,5 +1,6 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
-import { mixStreams, emptyWaterQuality } from '../types';
+import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
+import { getPrice } from '@repo/design-library';
 
 const parameterSchema: ParameterField[] = [
   { key: 'surface_area', label: 'Surface Area', unit: 'm²', min: 50, max: 10000, step: 50, defaultValue: 800 },
@@ -32,7 +33,7 @@ export class SecondaryClarifier implements ProcessUnit {
 
     if (inf.flow <= 0) {
       const zero = emptyWaterQuality();
-      return { outputs: { overflow: zero, underflow: zero }, metadata: {} };
+      return { outputs: { overflow: zero, underflow: zero }, metadata: {}, ...emptyUnitOutputs() };
     }
 
     const tssR = (p.tss_removal ?? 99.5) / 100;
@@ -78,13 +79,87 @@ export class SecondaryClarifier implements ProcessUnit {
       temperature: inf.temperature,
     };
 
+    const area = surfaceArea;
+    const depth = p.depth ?? 4.0;
+    const volume = area * depth;
+    const q_peak = inf.flow * 1.1;
+    const sor = q_peak / area;
+    const sor_mph = sor / 24;
+    const mlssIn = inf.TSS;
+    const totalFlowToClarifier = inf.flow * (1 + uoRatio);
+    const slr_kg_m2_h = (totalFlowToClarifier * mlssIn) / (area * 1000 * 24);
+
+    const base = emptyUnitOutputs();
+    base.sizing = {
+      surfaceArea: { value: area, unit: 'm2' },
+      depth: { value: depth, unit: 'm' },
+      volume: { value: volume, unit: 'm3' },
+    };
+    const civilPrice = getPrice('civil_concrete_reinforced');
+    const scraperPrice = getPrice('secondary_clarifier_scraper_bridge');
+    base.capex = {
+      lineItems: [
+        {
+          category: 'civil',
+          description: `Secondary clarifier reinforced concrete tank (${volume.toFixed(0)} m³)`,
+          quantity: volume,
+          unit: 'm3',
+          unitPriceZar: civilPrice.unitPriceZar,
+          sourceCitation: civilPrice.source,
+        },
+        {
+          category: 'mechanical',
+          description: 'Secondary clarifier scraper / suction bridge',
+          quantity: 1,
+          unit: 'ea',
+          unitPriceZar: scraperPrice.unitPriceZar,
+          sourceCitation: scraperPrice.source,
+        },
+      ],
+      total: volume * civilPrice.unitPriceZar + scraperPrice.unitPriceZar,
+    };
+    base.calculationRecords = [
+      {
+        label: 'Surface overflow rate (peak)',
+        symbol: 'SOR',
+        equation: 'SOR = Q_peak / A',
+        inputs: {
+          Q_peak: { value: q_peak, unit: 'm3/d', source: 'AWWF = Q × 1.1' },
+          A: { value: area, unit: 'm2', source: 'user input' },
+        },
+        result: { value: sor_mph, unit: 'm/h' },
+        citation: 'WRC TT-16/84 — SOR ≤ 1 m/h at peak',
+      },
+      {
+        label: 'Solids loading rate',
+        symbol: 'SLR',
+        equation: 'SLR = (Q + Q_ras) × MLSS / (A × 24)',
+        inputs: {
+          Q_total: { value: totalFlowToClarifier, unit: 'm3/d', source: 'feed + RAS' },
+          MLSS: { value: mlssIn, unit: 'mg/L', source: 'reactor effluent TSS' },
+          A: { value: area, unit: 'm2', source: 'user input' },
+        },
+        result: { value: slr_kg_m2_h, unit: 'kg/m2/h' },
+        citation: 'WRC TT-16/84 — SLR ≤ 6 kg/m²·h',
+      },
+    ];
+    if (sor_mph > 1.0)
+      base.warnings.push(
+        `SOR = ${sor_mph.toFixed(2)} m/h exceeds 1 m/h at peak. Increase surface area.`,
+      );
+    if (slr_kg_m2_h > 6.0)
+      base.warnings.push(
+        `SLR = ${slr_kg_m2_h.toFixed(2)} kg/m²·h exceeds 6 kg/m²·h. Increase surface area.`,
+      );
+
     return {
       outputs: { overflow, underflow },
       metadata: {
-        surface_loading_rate: inf.flow / surfaceArea,
+        surface_loading_rate: inf.flow / area,
         underflow_TSS: underflow.TSS,
         overflow_TSS: overflow.TSS,
       },
+      ...base,
     };
   }
 }

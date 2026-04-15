@@ -13,6 +13,24 @@ export type {
 
 export { emptyWaterQuality, mixStreams } from './types';
 
+// v2 types (new for proposal generator)
+export type {
+  Dimension,
+  CalculationRecord,
+  BoQLineItem,
+  BoQCategory,
+  ConsumableItem,
+  UnitOutputs,
+  PlantContext,
+} from './types';
+export {
+  isValidCalculationRecord,
+  BOQ_CATEGORIES,
+  isValidBoQLineItem,
+  emptyUnitOutputs,
+  defaultPlantContext,
+} from './types';
+
 // Unit models and registry
 export {
   unitDefinitions,
@@ -34,3 +52,11 @@ export {
 export { simulate } from './graph/simulator';
 export { topologicalSort } from './graph/topological-sort';
 export type { GraphNode, GraphEdge } from './graph/topological-sort';
+
+// BoQ engine
+export { aggregateBoQ } from './boq/aggregator';
+export type {
+  FlowsheetNodeLite,
+  BoQOverride,
+  AggregatedBoQ,
+} from './boq/aggregator';

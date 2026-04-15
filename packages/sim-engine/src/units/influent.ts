@@ -1,4 +1,5 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
+import { emptyUnitOutputs } from '../types';
 
 const parameterSchema: ParameterField[] = [
   { key: 'flow', label: 'Flow', unit: 'm³/d', min: 1, max: 1000000, step: 100, defaultValue: 10000 },
@@ -52,9 +53,44 @@ export class Influent implements ProcessUnit {
       temperature: p.temperature ?? 20,
     };
 
+    const base = emptyUnitOutputs();
+    base.calculationRecords = [
+      {
+        label: 'Design flow (ADWF)',
+        symbol: 'Q',
+        equation: 'Q = user-specified average dry weather flow',
+        inputs: {},
+        result: { value: output.flow, unit: 'm3/d' },
+        citation: 'User input — project design basis',
+      },
+      {
+        label: 'Influent COD load',
+        symbol: 'FSi',
+        equation: 'FSi = Q × COD / 1000',
+        inputs: {
+          Q: { value: output.flow, unit: 'm3/d', source: 'design flow' },
+          COD: { value: output.COD, unit: 'mg/L', source: 'user input' },
+        },
+        result: { value: (output.flow * output.COD) / 1000, unit: 'kgCOD/d' },
+        citation: 'Ekama (1984) WRC TT-16/84, sec 4.2',
+      },
+      {
+        label: 'Influent TKN load',
+        symbol: 'FNti',
+        equation: 'FNti = Q × TKN / 1000',
+        inputs: {
+          Q: { value: output.flow, unit: 'm3/d', source: 'design flow' },
+          TKN: { value: output.TKN, unit: 'mgN/L', source: 'user input' },
+        },
+        result: { value: (output.flow * output.TKN) / 1000, unit: 'kgN/d' },
+        citation: 'Ekama (1984) WRC TT-16/84, sec 4.2',
+      },
+    ];
+
     return {
       outputs: { out: output },
       metadata: {},
+      ...base,
     };
   }
 }
