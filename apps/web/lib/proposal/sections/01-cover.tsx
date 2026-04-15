@@ -13,7 +13,7 @@ interface Props {
 
 export function CoverSection(props: Props) {
   const { client, designer, profile, projectName, flowsheetName, onChange, onDesignerChange } = props;
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <section className="mb-10 print:h-[90vh] flex flex-col justify-between">
