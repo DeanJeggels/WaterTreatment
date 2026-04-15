@@ -76,9 +76,31 @@ const tiers = [
   },
 ];
 
-const processUnits = [
-  'Influent', 'Primary Clarifier', 'Aerobic Bioreactor', 'Anoxic Zone',
-  'Anaerobic Zone', 'Secondary Clarifier', 'Splitter', 'Mixer', 'Thickener', 'Effluent',
+const processUnits: { category: string; units: string[] }[] = [
+  {
+    category: 'Preliminary',
+    units: ['Coarse Screen', 'Fine Screen', 'Grit Removal', 'Equalisation Tank', 'Inlet Pumping'],
+  },
+  {
+    category: 'Primary',
+    units: ['Primary Clarifier'],
+  },
+  {
+    category: 'Biological',
+    units: ['Anaerobic Reactor', 'Anoxic Reactor', 'Aerobic Reactor', 'MBR', 'Aeration Blower'],
+  },
+  {
+    category: 'Secondary & Tertiary',
+    units: ['Secondary Clarifier', 'UV Disinfection', 'Chemical Dosing'],
+  },
+  {
+    category: 'Sludge',
+    units: ['Thickener', 'Dewatering'],
+  },
+  {
+    category: 'Flow & Utility',
+    units: ['Influent', 'Effluent', 'Splitter', 'Mixer'],
+  },
 ];
 
 export default function LandingPage() {
@@ -135,18 +157,27 @@ export default function LandingPage() {
       </section>
 
       {/* Process Units */}
-      <section className="py-8 border-y border-border/50 bg-card/50">
+      <section className="py-12 border-y border-border/50 bg-card/50">
         <div className="container mx-auto px-4">
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {processUnits.map((unit, i) => (
-              <span key={unit} className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <span className="bg-primary/10 text-primary px-2.5 py-1 rounded-md text-xs font-medium">
-                  {unit}
-                </span>
-                {i < processUnits.length - 1 && (
-                  <ArrowRight className="h-3 w-3 text-muted-foreground/30" />
-                )}
-              </span>
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold mb-1">19 process units covered</h2>
+            <p className="text-sm text-muted-foreground">
+              From headworks to sludge disposal — everything you need for a full biological plant design.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {processUnits.map(({ category, units }) => (
+              <div key={category}>
+                <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">{category}</h3>
+                <ul className="space-y-1">
+                  {units.map((unit) => (
+                    <li key={unit} className="flex items-center gap-2 text-sm">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                      <span className="text-foreground">{unit}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
           </div>
         </div>
