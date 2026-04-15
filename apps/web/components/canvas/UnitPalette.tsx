@@ -3,6 +3,7 @@
 import {
   Droplets, Cylinder, Wind, Moon, FlaskConical, Triangle,
   GitBranch, Merge, Funnel, Waves,
+  Filter, Circle, Square, Layers, Fan, Droplet, Beaker, Sun, ArrowUp,
 } from 'lucide-react';
 import type { UnitType } from '@repo/sim-engine';
 import { unitDefinitions } from '@repo/sim-engine';
@@ -19,20 +20,78 @@ const iconMap: Record<UnitType, React.ComponentType<{ className?: string }>> = {
   mixer: Merge,
   thickener: Funnel,
   effluent: Waves,
+  screen: Filter,
+  grit_removal: Circle,
+  equalisation_tank: Square,
+  mbr: Layers,
+  aeration_blower: Fan,
+  dewatering: Droplet,
+  chemical_dosing: Beaker,
+  uv_disinfection: Sun,
+  inlet_pumping: ArrowUp,
 };
 
-const unitTypes: UnitType[] = [
-  'influent',
-  'primary_clarifier',
-  'bioreactor_aerobic',
-  'bioreactor_anoxic',
-  'bioreactor_anaerobic',
-  'secondary_clarifier',
-  'splitter',
-  'mixer',
-  'thickener',
-  'effluent',
+type Category =
+  | 'flow'
+  | 'preliminary'
+  | 'primary'
+  | 'biological'
+  | 'tertiary'
+  | 'sludge'
+  | 'utility';
+
+const CATEGORY_ORDER: Category[] = [
+  'flow',
+  'preliminary',
+  'primary',
+  'biological',
+  'tertiary',
+  'sludge',
+  'utility',
 ];
+
+const CATEGORY_LABELS: Record<Category, string> = {
+  flow: 'Flow I/O',
+  preliminary: 'Preliminary',
+  primary: 'Primary',
+  biological: 'Biological',
+  tertiary: 'Tertiary',
+  sludge: 'Sludge',
+  utility: 'Utility',
+};
+
+const UNIT_CATEGORY: Record<UnitType, Category> = {
+  influent: 'flow',
+  effluent: 'flow',
+  splitter: 'flow',
+  mixer: 'flow',
+  inlet_pumping: 'preliminary',
+  screen: 'preliminary',
+  grit_removal: 'preliminary',
+  equalisation_tank: 'preliminary',
+  primary_clarifier: 'primary',
+  bioreactor_anaerobic: 'biological',
+  bioreactor_anoxic: 'biological',
+  bioreactor_aerobic: 'biological',
+  mbr: 'biological',
+  secondary_clarifier: 'biological',
+  uv_disinfection: 'tertiary',
+  chemical_dosing: 'tertiary',
+  thickener: 'sludge',
+  dewatering: 'sludge',
+  aeration_blower: 'utility',
+};
+
+function groupUnits(): Record<Category, UnitType[]> {
+  const groups: Record<Category, UnitType[]> = {
+    flow: [], preliminary: [], primary: [], biological: [],
+    tertiary: [], sludge: [], utility: [],
+  };
+  for (const type of Object.keys(unitDefinitions) as UnitType[]) {
+    groups[UNIT_CATEGORY[type]].push(type);
+  }
+  return groups;
+}
 
 export default function UnitPalette({
   disabled = false,
@@ -49,37 +108,59 @@ export default function UnitPalette({
     event.dataTransfer.effectAllowed = 'move';
   }
 
+  const groups = groupUnits();
+
   return (
-    <div className="w-48 border-r border-border bg-card p-3 overflow-y-auto">
-      <div className="flex items-center gap-1.5 mb-3">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+    <aside className="w-56 border-r border-border bg-card/40 overflow-y-auto">
+      <div className="px-3 pt-4 pb-2 flex items-center gap-1.5">
+        <h2 className="text-[11px] font-semibold text-foreground uppercase tracking-wider">
           Process Units
-        </h3>
+        </h2>
         <HelpTooltip text="Drag units onto the canvas to build your flowsheet. Connect them by dragging from output handles to input handles." />
       </div>
       {unitLimit < Infinity && (
-        <p className={`text-[10px] mb-2 ${disabled ? 'text-destructive' : 'text-muted-foreground'}`}>
-          {unitCount}/{unitLimit} units {disabled && '(limit reached)'}
+        <p className={`px-3 pb-2 text-[10px] ${disabled ? 'text-destructive' : 'text-muted-foreground'}`}>
+          {unitCount}/{unitLimit} units{disabled && ' — limit reached'}
         </p>
       )}
-      <div className="space-y-1">
-        {unitTypes.map((type) => {
-          const def = unitDefinitions[type];
-          const Icon = iconMap[type];
-          return (
-            <div
-              key={type}
-              draggable={!disabled}
-              onDragStart={(e) => onDragStart(e, type)}
-              className={`flex items-center gap-2 rounded-md px-2 py-2 transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-grab hover:bg-accent'}`}
-              title={disabled ? 'Unit limit reached — upgrade your plan' : def.description}
-            >
-              <Icon className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-sm truncate">{def.label}</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+
+      {CATEGORY_ORDER.map((category) => {
+        const types = groups[category];
+        if (types.length === 0) return null;
+        return (
+          <section
+            key={category}
+            className="px-2 py-3 border-t border-border/60 first-of-type:border-t-0"
+          >
+            <h3 className="px-2 mb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              {CATEGORY_LABELS[category]}
+            </h3>
+            <ul className="space-y-0.5">
+              {types.map((type) => {
+                const def = unitDefinitions[type];
+                const Icon = iconMap[type];
+                return (
+                  <li key={type}>
+                    <div
+                      draggable={!disabled}
+                      onDragStart={(e) => onDragStart(e, type)}
+                      className={`group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+                        disabled
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'cursor-grab hover:bg-accent hover:text-accent-foreground active:cursor-grabbing'
+                      }`}
+                      title={disabled ? 'Unit limit reached — upgrade your plan' : def.description}
+                    >
+                      <Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />
+                      <span className="truncate">{def.label}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
+    </aside>
   );
 }

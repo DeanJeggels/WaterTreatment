@@ -8,18 +8,12 @@ import {
   Background,
   BackgroundVariant,
   useReactFlow,
-  type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import ProcessUnitNode from './custom-nodes/ProcessUnitNode';
+import { nodeTypes } from './node-types';
 import { useFlowsheetStore, type FlowsheetNode } from '@/stores/flowsheet-store';
 import type { UnitType } from '@repo/sim-engine';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const nodeTypes: NodeTypes = {
-  processUnit: ProcessUnitNode as any,
-};
 
 export default function Canvas() {
   const reactFlowInstance = useReactFlow();
@@ -84,15 +78,21 @@ export default function Canvas() {
         defaultEdgeOptions={{
           animated: true,
           type: 'smoothstep',
-          style: { stroke: '#94a3b8', strokeWidth: 2 },
+          style: { strokeWidth: 2 },
         }}
       >
-        <Controls className="!bg-card !border-border" />
+        <Controls className="!bg-card !border-border !text-foreground" />
         <MiniMap
           className="!bg-card !border-border"
-          nodeColor="hsl(var(--primary))"
+          nodeColor="var(--primary)"
+          maskColor="var(--muted)"
         />
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="hsl(var(--border))" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={1}
+          color="var(--canvas-dots)"
+        />
       </ReactFlow>
     </div>
   );

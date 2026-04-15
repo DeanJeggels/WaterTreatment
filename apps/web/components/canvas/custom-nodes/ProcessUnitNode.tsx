@@ -5,6 +5,7 @@ import { Handle, Position } from '@xyflow/react';
 import {
   Droplets, Cylinder, Wind, Moon, FlaskConical, Triangle,
   GitBranch, Merge, Funnel, Waves,
+  Filter, Circle, Square, Layers, Fan, Droplet, Beaker, Sun, ArrowUp,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -28,6 +29,15 @@ const iconMap: Record<UnitType, React.ComponentType<{ className?: string }>> = {
   mixer: Merge,
   thickener: Funnel,
   effluent: Waves,
+  screen: Filter,
+  grit_removal: Circle,
+  equalisation_tank: Square,
+  mbr: Layers,
+  aeration_blower: Fan,
+  dewatering: Droplet,
+  chemical_dosing: Beaker,
+  uv_disinfection: Sun,
+  inlet_pumping: ArrowUp,
 };
 
 const wqDisplayKeys: { key: keyof WaterQuality; label: string; unit: string }[] = [
@@ -56,16 +66,16 @@ function ProcessUnitNode({ id, data, selected }: { id: string; data: FlowsheetNo
     : undefined;
 
   // Determine border color based on simulation state
-  let borderColor = 'border-border hover:border-primary/50'; // gray: not simulated
+  let borderColor = 'border-border hover:border-primary/50'; // not simulated
   if (selected) {
     borderColor = 'border-primary shadow-lg shadow-primary/20';
   } else if (nodeResult && data.unitType === 'effluent' && compliance) {
     const allPass = Object.values(compliance).every(c => c.pass);
     borderColor = allPass
-      ? 'border-green-500 shadow-md shadow-green-500/20'
-      : 'border-red-500 shadow-md shadow-red-500/20';
+      ? 'border-primary shadow-md shadow-primary/20'
+      : 'border-destructive shadow-md shadow-destructive/20';
   } else if (nodeResult) {
-    borderColor = 'border-green-500/50';
+    borderColor = 'border-primary/50';
   }
 
   const nodeContent = (

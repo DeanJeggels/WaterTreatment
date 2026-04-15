@@ -6,11 +6,12 @@ import { ReactFlowProvider } from '@xyflow/react';
 import Canvas from '@/components/canvas/Canvas';
 import UnitPalette from '@/components/canvas/UnitPalette';
 import InspectorPanel from '@/components/inspector/InspectorPanel';
-import ResultsPanel from '@/components/results/ResultsPanel';
 import { useSimulationStore } from '@/stores/simulation-store';
 import { useProjectStore } from '@/stores/project-store';
 import { Button } from '@/components/ui/button';
-import { Play, Loader2, Save, Check, FileText, Share2 } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { ProjectEditorTabs } from '@/components/layout/project-editor-tabs';
+import { Play, Loader2, Save, Check, FileText, Share2, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -156,42 +157,44 @@ export default function FlowsheetEditorPage() {
     <ReactFlowProvider>
       <div className="flex flex-col h-screen bg-background">
         {/* Top Bar */}
-        <header className="flex items-center justify-between h-12 px-4 border-b border-border bg-card shrink-0">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-sm font-bold hover:opacity-80">
+        <header className="flex items-center justify-between h-12 px-3 sm:px-4 border-b border-border bg-card shrink-0 gap-2 print:hidden">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <Link href="/dashboard" className="text-sm font-bold hover:opacity-80 shrink-0">
               Aqua<span className="text-primary">Sim</span>
             </Link>
-            <span className="text-muted-foreground">/</span>
-            <span className="text-sm">{projectName}</span>
-            <span className="text-muted-foreground">/</span>
-            <span className="text-sm text-muted-foreground">{flowsheetName}</span>
+            <span className="text-muted-foreground hidden sm:inline">/</span>
+            <span className="text-sm truncate hidden sm:inline">{projectName}</span>
+            <span className="text-muted-foreground hidden md:inline">/</span>
+            <span className="text-sm text-muted-foreground truncate hidden md:inline">{flowsheetName}</span>
+            <ProjectEditorTabs projectId={params.id} flowsheetId={params.flowsheetId} />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {lastSaved && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <span className="text-xs text-muted-foreground hidden lg:flex items-center gap-1">
                 <Check className="h-3 w-3" />
                 Saved {lastSaved.toLocaleTimeString()}
               </span>
             )}
-            <Button variant="outline" size="sm" onClick={saveFlowsheet} disabled={isSaving}>
+            <Button variant="outline" size="sm" onClick={saveFlowsheet} disabled={isSaving} title="Save">
               {isSaving ? (
-                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin md:mr-1" />
               ) : (
-                <Save className="mr-1 h-3.5 w-3.5" />
+                <Save className="h-3.5 w-3.5 md:mr-1" />
               )}
-              Save
+              <span className="hidden md:inline">Save</span>
             </Button>
             <Button
               size="sm"
               onClick={runSimulation}
               disabled={isRunning}
+              title="Run Simulation"
             >
               {isRunning ? (
-                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin md:mr-1" />
               ) : (
-                <Play className="mr-1 h-3.5 w-3.5" />
+                <Play className="h-3.5 w-3.5 md:mr-1" />
               )}
-              Run Simulation
+              <span className="hidden md:inline">Run Simulation</span>
             </Button>
             <Button
               variant="outline"
@@ -200,29 +203,46 @@ export default function FlowsheetEditorPage() {
               disabled={status !== 'completed' && canGenerateReport}
               title={canGenerateReport ? 'Generate PDF report' : 'Upgrade to Pro for PDF reports'}
             >
-              <FileText className="mr-1 h-3.5 w-3.5" />
-              Report{!canGenerateReport && ' (Pro)'}
+              <FileText className="h-3.5 w-3.5 md:mr-1" />
+              <span className="hidden md:inline">Report{!canGenerateReport && ' (Pro)'}</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={handleShare}>
-              <Share2 className="mr-1 h-3.5 w-3.5" />
-              Share
+            <Button variant="outline" size="sm" onClick={handleShare} title="Share">
+              <Share2 className="h-3.5 w-3.5 md:mr-1" />
+              <span className="hidden md:inline">Share</span>
             </Button>
           </div>
         </header>
 
         {/* Main Content */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="relative flex flex-1 overflow-hidden">
           <UnitPalette disabled={atUnitLimit} unitCount={nodes.length} unitLimit={limits.maxUnitsPerFlowsheet} />
           <ErrorBoundary fallbackLabel="Canvas">
             <Canvas />
           </ErrorBoundary>
-          <InspectorPanel />
-        </div>
 
-        {/* Bottom: Results */}
-        <ErrorBoundary fallbackLabel="Results panel">
-          <ResultsPanel />
-        </ErrorBoundary>
+          {/* Inspector — permanent rail on lg+, Sheet trigger below lg */}
+          <div className="hidden lg:block">
+            <InspectorPanel />
+          </div>
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="lg:hidden fixed bottom-4 right-4 z-40 shadow-lg"
+                  aria-label="Open inspector"
+                  title="Inspector"
+                />
+              }
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[90vw] sm:max-w-sm p-0 overflow-y-auto">
+              <InspectorPanel />
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </ReactFlowProvider>
   );

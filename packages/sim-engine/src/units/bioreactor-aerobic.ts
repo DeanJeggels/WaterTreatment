@@ -1,5 +1,9 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
-import { mixStreams, emptyWaterQuality } from '../types';
+import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
+import { getPrice } from '@repo/design-library';
+
+// Diffuser density rule of thumb: ~1 diffuser per 3 m³ reactor volume (fine bubble grid)
+const DIFFUSER_PER_M3 = 1 / 3;
 
 const parameterSchema: ParameterField[] = [
   { key: 'volume', label: 'Volume', unit: 'm³', min: 100, max: 100000, step: 100, defaultValue: 5000 },
@@ -35,7 +39,7 @@ export class BioreactorAerobic implements ProcessUnit {
     const p = this.parameters;
 
     if (inf.flow <= 0) {
-      return { outputs: { out: emptyWaterQuality() }, metadata: {} };
+      return { outputs: { out: emptyWaterQuality() }, metadata: {}, ...emptyUnitOutputs() };
     }
 
     const volume = p.volume ?? 5000;
@@ -105,6 +109,108 @@ export class BioreactorAerobic implements ProcessUnit {
       temperature: inf.temperature,
     };
 
+    const depth = p.depth ?? 4.5;
+    const o2TotalKgPerD = ((Math.max(0, o2Carbonaceous) + o2Nitrification) * inf.flow) / 1000;
+    const diffuserCount = Math.ceil(volume * DIFFUSER_PER_M3);
+
+    const base = emptyUnitOutputs();
+    base.sizing = {
+      volume: { value: volume, unit: 'm3' },
+      depth: { value: depth, unit: 'm' },
+      HRT: { value: hrt * 24, unit: 'h' },
+      MLSS: { value: mlss, unit: 'mg/L' },
+    };
+    base.energy = {
+      installedKW: 0,
+      dailyKWh: 0,
+      records: [
+        {
+          label: 'Total O2 demand',
+          symbol: 'FOt',
+          equation: 'FOt = (FOc + FOn − FOdn) × Q / 1000',
+          inputs: {
+            FOc: { value: Math.max(0, o2Carbonaceous), unit: 'mgO/L', source: 'carbonaceous' },
+            FOn: { value: o2Nitrification, unit: 'mgO/L', source: 'nitrification' },
+            Q: { value: inf.flow, unit: 'm3/d', source: 'inlet flow' },
+          },
+          result: { value: o2TotalKgPerD, unit: 'kgO2/d' },
+          citation: 'Ekama (1984) WRC TT-16/84, eq 4.23',
+        },
+      ],
+    };
+    const civilPrice = getPrice('civil_concrete_reinforced');
+    const diffuserPrice = getPrice('fine_bubble_diffuser_edi_9in');
+    base.capex = {
+      lineItems: [
+        {
+          category: 'civil',
+          description: `Aerobic reactor reinforced concrete tank (${volume.toFixed(0)} m³)`,
+          quantity: volume,
+          unit: 'm3',
+          unitPriceZar: civilPrice.unitPriceZar,
+          sourceCitation: civilPrice.source,
+        },
+        {
+          category: 'mechanical',
+          description: `9" fine bubble diffusers (EDI FlexAir) × ${diffuserCount}`,
+          quantity: diffuserCount,
+          unit: 'ea',
+          unitPriceZar: diffuserPrice.unitPriceZar,
+          sourceCitation: diffuserPrice.source,
+        },
+      ],
+      total: volume * civilPrice.unitPriceZar + diffuserCount * diffuserPrice.unitPriceZar,
+    };
+    base.calculationRecords = [
+      {
+        label: 'Hydraulic retention time',
+        symbol: 'HRT',
+        equation: 'HRT = V / Q × 24',
+        inputs: {
+          V: { value: volume, unit: 'm3', source: 'user input' },
+          Q: { value: inf.flow, unit: 'm3/d', source: 'inlet flow' },
+        },
+        result: { value: hrt * 24, unit: 'h' },
+        citation: 'Ekama (1984) WRC TT-16/84, eq 4.1',
+      },
+      {
+        label: 'Mixed liquor suspended solids',
+        symbol: 'MLSS',
+        equation: 'MLSS = Y_obs × sCOD_removed × SRT / HRT',
+        inputs: {
+          Y_obs: { value: yObs, unit: 'mgVSS/mgCOD', source: 'user input' },
+          sCOD_removed: { value: sCOD_removed, unit: 'mg/L', source: 'biodegradation' },
+          SRT: { value: srt, unit: 'd', source: 'user input' },
+          HRT: { value: hrt, unit: 'd', source: 'V/Q' },
+        },
+        result: { value: mlss, unit: 'mg/L' },
+        citation: 'Ekama (1984) WRC TT-16/84, eq 4.8',
+      },
+      {
+        label: 'Carbonaceous O2 demand',
+        symbol: 'FOc',
+        equation: 'FOc = sCOD_rem − 1.42 × biomass_produced',
+        inputs: {
+          sCOD_rem: { value: sCOD_removed, unit: 'mg/L', source: 'biodegradation' },
+          biomass: { value: biomassProduced, unit: 'mg/L', source: 'Y × sCOD / (1 + kd·SRT)' },
+        },
+        result: { value: Math.max(0, o2Carbonaceous), unit: 'mgO/L' },
+        citation: 'Ekama (1984) WRC TT-16/84, eq 4.22',
+      },
+      {
+        label: 'Nitrification O2 demand',
+        symbol: 'FOn',
+        equation: 'FOn = 4.57 × NH3_oxidised',
+        inputs: {
+          NH3_ox: { value: nh3Oxidized, unit: 'mgN/L', source: 'nitrification' },
+        },
+        result: { value: o2Nitrification, unit: 'mgO/L' },
+        citation: 'Ekama (1984) WRC TT-16/84, eq 4.21',
+      },
+    ];
+    if (mlss > 6000) base.warnings.push(`MLSS = ${mlss.toFixed(0)} mg/L > 6000. Consider MBR or more volume.`);
+    if (mlss < 2000) base.warnings.push(`MLSS = ${mlss.toFixed(0)} mg/L < 2000. Reactor may be underloaded.`);
+
     return {
       outputs: { out: output },
       metadata: {
@@ -118,6 +224,7 @@ export class BioreactorAerobic implements ProcessUnit {
         biomass_produced: biomassProduced,
         NH3_oxidized: nh3Oxidized,
       },
+      ...base,
     };
   }
 }

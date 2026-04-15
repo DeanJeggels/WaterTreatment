@@ -7,6 +7,7 @@ import { Plus, FolderOpen, Crown, Zap } from 'lucide-react';
 import Link from 'next/link';
 import DeleteProjectButton from './delete-project-button';
 import SubscriptionManager from './subscription-manager';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { getPlanLimits } from '@/lib/stripe/config';
 
 export default async function DashboardPage() {
@@ -56,6 +57,7 @@ export default async function DashboardPage() {
             </Badge>
             <span className="text-sm text-muted-foreground">{user.email}</span>
             <SubscriptionManager currentTier={tier} stripeConfigured={!!process.env.STRIPE_SECRET_KEY} />
+            <ThemeToggle />
             <form action="/auth/signout" method="post">
               <Button type="submit" variant="ghost" size="sm">Sign Out</Button>
             </form>
