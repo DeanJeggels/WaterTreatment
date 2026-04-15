@@ -11,6 +11,7 @@ import { useSimulationStore } from '@/stores/simulation-store';
 import { useProjectStore } from '@/stores/project-store';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { ProjectEditorTabs } from '@/components/layout/project-editor-tabs';
 import { Play, Loader2, Save, Check, FileText, Share2, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -157,7 +158,7 @@ export default function FlowsheetEditorPage() {
     <ReactFlowProvider>
       <div className="flex flex-col h-screen bg-background">
         {/* Top Bar */}
-        <header className="flex items-center justify-between h-12 px-3 sm:px-4 border-b border-border bg-card shrink-0 gap-2">
+        <header className="flex items-center justify-between h-12 px-3 sm:px-4 border-b border-border bg-card shrink-0 gap-2 print:hidden">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <Link href="/dashboard" className="text-sm font-bold hover:opacity-80 shrink-0">
               Aqua<span className="text-primary">Sim</span>
@@ -166,6 +167,7 @@ export default function FlowsheetEditorPage() {
             <span className="text-sm truncate hidden sm:inline">{projectName}</span>
             <span className="text-muted-foreground hidden md:inline">/</span>
             <span className="text-sm text-muted-foreground truncate hidden md:inline">{flowsheetName}</span>
+            <ProjectEditorTabs projectId={params.id} flowsheetId={params.flowsheetId} />
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {lastSaved && (
