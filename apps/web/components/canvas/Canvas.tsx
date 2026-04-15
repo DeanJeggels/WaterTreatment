@@ -8,18 +8,12 @@ import {
   Background,
   BackgroundVariant,
   useReactFlow,
-  type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import ProcessUnitNode from './custom-nodes/ProcessUnitNode';
+import { nodeTypes } from './node-types';
 import { useFlowsheetStore, type FlowsheetNode } from '@/stores/flowsheet-store';
 import type { UnitType } from '@repo/sim-engine';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const nodeTypes: NodeTypes = {
-  processUnit: ProcessUnitNode as any,
-};
 
 export default function Canvas() {
   const reactFlowInstance = useReactFlow();
