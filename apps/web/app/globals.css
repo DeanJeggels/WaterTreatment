@@ -178,3 +178,51 @@
   background: var(--canvas-handle);
   opacity: 0.6;
 }
+
+/* AquaSim v2 — proposal print styling (Phase 7) */
+@media print {
+  @page {
+    size: A4;
+    margin: 18mm 18mm 22mm 18mm;
+  }
+
+  /* Force light mode for print regardless of screen theme */
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .proposal-document {
+    max-width: none !important;
+    color: black !important;
+  }
+
+  .proposal-document h1 {
+    font-size: 24pt;
+    line-height: 1.2;
+  }
+  .proposal-document h2 {
+    font-size: 14pt;
+    line-height: 1.3;
+    margin-top: 0;
+  }
+  .proposal-document h3 {
+    font-size: 11pt;
+  }
+  .proposal-document {
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+  .proposal-document table {
+    font-size: 9pt;
+  }
+  .proposal-document .font-mono {
+    font-family: var(--font-mono, ui-monospace), monospace;
+  }
+
+  /* Avoid awkward breaks inside calculation record cards */
+  .proposal-document [class*="rounded-md border"] {
+    break-inside: avoid;
+  }
+}
