@@ -6,7 +6,6 @@ import { ReactFlowProvider } from '@xyflow/react';
 import Canvas from '@/components/canvas/Canvas';
 import UnitPalette from '@/components/canvas/UnitPalette';
 import InspectorPanel from '@/components/inspector/InspectorPanel';
-import ResultsPanel from '@/components/results/ResultsPanel';
 import { useSimulationStore } from '@/stores/simulation-store';
 import { useProjectStore } from '@/stores/project-store';
 import { Button } from '@/components/ui/button';
@@ -244,11 +243,6 @@ export default function FlowsheetEditorPage() {
             </SheetContent>
           </Sheet>
         </div>
-
-        {/* Bottom: Results */}
-        <ErrorBoundary fallbackLabel="Results panel">
-          <ResultsPanel />
-        </ErrorBoundary>
       </div>
     </ReactFlowProvider>
   );
