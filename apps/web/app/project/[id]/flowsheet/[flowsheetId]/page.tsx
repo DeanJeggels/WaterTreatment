@@ -10,7 +10,8 @@ import ResultsPanel from '@/components/results/ResultsPanel';
 import { useSimulationStore } from '@/stores/simulation-store';
 import { useProjectStore } from '@/stores/project-store';
 import { Button } from '@/components/ui/button';
-import { Play, Loader2, Save, Check, FileText, Share2 } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Play, Loader2, Save, Check, FileText, Share2, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -212,12 +213,34 @@ export default function FlowsheetEditorPage() {
         </header>
 
         {/* Main Content */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="relative flex flex-1 overflow-hidden">
           <UnitPalette disabled={atUnitLimit} unitCount={nodes.length} unitLimit={limits.maxUnitsPerFlowsheet} />
           <ErrorBoundary fallbackLabel="Canvas">
             <Canvas />
           </ErrorBoundary>
-          <InspectorPanel />
+
+          {/* Inspector — permanent rail on lg+, Sheet trigger below lg */}
+          <div className="hidden lg:block">
+            <InspectorPanel />
+          </div>
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="lg:hidden fixed bottom-4 right-4 z-40 shadow-lg"
+                  aria-label="Open inspector"
+                  title="Inspector"
+                />
+              }
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[90vw] sm:max-w-sm p-0 overflow-y-auto">
+              <InspectorPanel />
+            </SheetContent>
+          </Sheet>
         </div>
 
         {/* Bottom: Results */}
