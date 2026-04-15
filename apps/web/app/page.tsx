@@ -3,40 +3,46 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Droplets, GitBranch, BarChart3, FileText, Shield, Users,
-  CheckCircle, ArrowRight, Zap, Crown,
+  GitBranch, FileText, CheckCircle, ArrowRight, Zap, Crown,
+  Calculator, Receipt, ClipboardCheck, Layers,
 } from 'lucide-react';
 
 const features = [
   {
-    icon: Droplets,
-    title: 'Drag-and-Drop Design',
-    description: 'Build wastewater treatment flowsheets with 10 process units — influent, clarifiers, bioreactors, splitters, mixers, and more.',
-  },
-  {
     icon: GitBranch,
-    title: 'Real-Time Simulation',
-    description: 'Client-side mass balance engine with recycle stream convergence. Results in under 100ms for typical flowsheets.',
+    title: 'Drag-and-drop flowsheet editor',
+    description:
+      '19 process units — screens, clarifiers, bioreactors, MBR, thickeners, dewatering, dosing, UV, pumps. Connect them on a canvas, set parameters, run the mass balance.',
   },
   {
-    icon: BarChart3,
-    title: 'Compliance Checking',
-    description: 'Compare effluent quality against configurable discharge standards. Instant pass/fail on COD, BOD, NH3-N, TSS, and TP.',
+    icon: Calculator,
+    title: 'Every number is defensible',
+    description:
+      'Sizing, energy, and BoQ values come with the equation, the inputs, and a citation to published literature (Ekama, WRC, Metcalf & Eddy, supplier datasheets). Click any value in the inspector to see the derivation.',
+  },
+  {
+    icon: Receipt,
+    title: 'Real SA supplier prices',
+    description:
+      'Huber, Megavision, Sulzer, Grundfos, Andritz, Alfa Laval, Xylem Wedeco — every BoQ line item is priced from a real supplier catalogue or quote, not a textbook placeholder.',
+  },
+  {
+    icon: ClipboardCheck,
+    title: 'DWA compliance, built in',
+    description:
+      'Every effluent stream is checked against the National Water Act General and Special limits. Pass/fail per parameter, with the exact citation, right in the proposal.',
   },
   {
     icon: FileText,
-    title: 'PDF Reports',
-    description: 'Generate professional simulation reports with flowsheet summaries, water quality tables, and compliance results.',
+    title: 'Client proposals in one click',
+    description:
+      'From simulated flowsheet to a formatted 11-section design report: cover, executive summary, design basis, sizing calculations, aeration design, energy, consumables, Bill of Quantities, effluent compliance, disclaimer. Browser print-to-PDF — no uploads.',
   },
   {
-    icon: Shield,
-    title: '14 WQ Parameters',
-    description: 'Track flow, COD, sCOD, BOD5, TKN, NH3-N, NO3-N, TP, TSS, VSS, pH, alkalinity, DO, and temperature at every point.',
-  },
-  {
-    icon: Users,
-    title: 'Share & Collaborate',
-    description: 'Create view-only share links for clients and colleagues. Enterprise plans include full team workspaces.',
+    icon: Layers,
+    title: 'Full biological train coverage',
+    description:
+      'Preliminary treatment through sludge handling: bar screens, grit, equalisation, primary and secondary clarification, MLE / UCT / MBR, thickeners, dewatering, chemical dosing, UV disinfection, inlet pumping. Every unit carries its own sizing, energy, and CapEx.',
   },
 ];
 
