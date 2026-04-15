@@ -148,31 +148,31 @@ export default function LandingPage() {
       <section className="py-24 px-4">
         <div className="container mx-auto text-center max-w-3xl">
           <Badge variant="secondary" className="mb-4 text-xs">
-            Web-based wastewater process simulator
+            Wastewater design & proposal generator
           </Badge>
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
             Design. Simulate.{' '}
-            <span className="text-primary">Comply.</span>
+            <span className="text-primary">Deliver.</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Build wastewater treatment flowsheets, run mass balance simulations,
-            and verify discharge compliance — all in your browser. No installation required.
+            From wastewater sample to client-ready design proposal in the same tool.
+            Auditable calculations, real South African supplier prices, and one-click PDF export.
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link href="/register">
               <Button size="lg" className="text-base px-8">
-                Start Free
+                Start free
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <Link href="/login">
               <Button size="lg" variant="outline" className="text-base px-8">
-                Sign In
+                Sign in
               </Button>
             </Link>
           </div>
           <p className="text-sm text-muted-foreground mt-4">
-            Free tier includes 3 projects. No credit card required.
+            Free tier includes 3 projects. No credit card required. Built for SA consulting engineers.
           </p>
         </div>
       </section>
@@ -288,14 +288,14 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="py-24 px-4">
         <div className="container mx-auto text-center max-w-2xl">
-          <h2 className="text-3xl font-bold mb-4">Ready to modernize your process design?</h2>
+          <h2 className="text-3xl font-bold mb-4">Stop building proposals in Word.</h2>
           <p className="text-muted-foreground mb-8">
-            Join engineers who have moved from desktop software to the cloud.
-            Design flowsheets, simulate treatment, and verify compliance — anywhere.
+            AquaSim collapses the design-to-deliverable cycle into a single tool.
+            Your calculations, your Bill of Quantities, and your client proposal — one workflow, one export.
           </p>
           <Link href="/register">
             <Button size="lg" className="text-base px-8">
-              Create Your Free Account
+              Create your free account
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
@@ -306,7 +306,7 @@ export default function LandingPage() {
       <footer className="border-t border-border/50 py-8 px-4">
         <div className="container mx-auto flex items-center justify-between text-sm text-muted-foreground">
           <span>AquaSim by CH-ISE (PTY) LTD</span>
-          <span>Wastewater Treatment Process Simulator</span>
+          <span>Wastewater design & proposal generator</span>
         </div>
       </footer>
     </div>
