@@ -3,10 +3,12 @@
 import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { DWA_LIMITS } from '@repo/design-library';
 import { ProjectEditorTabs } from '@/components/layout/project-editor-tabs';
 import { PageShell } from '@/components/layout/page-shell';
 import { useProjectStore } from '@/stores/project-store';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { ProposalDocument } from '@/lib/proposal/ProposalDocument';
 
 export default function ProposalPage() {
   const params = useParams<{ id: string; flowsheetId: string }>();
@@ -37,9 +39,17 @@ export default function ProposalPage() {
 
       <main className="container mx-auto max-w-4xl px-6 py-8 print:px-0 print:py-0 print:max-w-none">
         <ErrorBoundary fallbackLabel="Proposal">
-          <div className="rounded-lg border border-dashed border-border p-12 text-center text-muted-foreground">
-            Proposal document — section stubs render in Task 4
-          </div>
+          <ProposalDocument
+            proposalData={{}}
+            onChange={() => {}}
+            profile={{ full_name: null, company: null, company_logo_url: null, designer_title: null }}
+            results={null}
+            boq={null}
+            effluentStream={null}
+            dischargeStandard={DWA_LIMITS.General}
+            flowsheetName={flowsheetName ?? 'Untitled flowsheet'}
+            projectName={projectName ?? 'Untitled project'}
+          />
         </ErrorBoundary>
       </main>
     </PageShell>
