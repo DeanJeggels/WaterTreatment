@@ -1,4 +1,4 @@
-import type { WaterQuality, SimulationResults, UnitType } from '../types';
+import type { WaterQuality, SimulationResults, UnitType, ProcessResult } from '../types';
 import { emptyWaterQuality } from '../types';
 import { topologicalSort } from './topological-sort';
 import type { GraphNode, GraphEdge } from './topological-sort';
@@ -43,7 +43,7 @@ export function simulate(
     edgeState.set(re.id, guess);
   }
 
-  const nodeResults = new Map<string, { outputs: Record<string, WaterQuality>; metadata: Record<string, number> }>();
+  const nodeResults = new Map<string, ProcessResult>();
   let converged = false;
   let iteration = 0;
 
@@ -139,7 +139,7 @@ export function simulate(
   const massBalanceError = totalCODIn > 0 ? Math.abs(totalCODIn - totalCODOut) / totalCODIn : 0;
 
   // Build results
-  const finalNodeResults: Record<string, { outputs: Record<string, WaterQuality>; metadata: Record<string, number> }> = {};
+  const finalNodeResults: Record<string, ProcessResult> = {};
   for (const [id, result] of nodeResults) {
     finalNodeResults[id] = result;
   }
