@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [privacyConsent, setPrivacyConsent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -26,8 +27,14 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+    if (!privacyConsent) {
+      setError('You must accept the privacy notice to create an account.');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 12) {
+      setError('Password must be at least 12 characters.');
       setLoading(false);
       return;
     }
@@ -141,12 +148,12 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Min. 8 characters"
+                  placeholder="Min. 12 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10"
                   required
-                  minLength={8}
+                  minLength={12}
                 />
               </div>
             </div>
@@ -162,9 +169,27 @@ export default function RegisterPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="pl-10"
                   required
-                  minLength={8}
+                  minLength={12}
                 />
               </div>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <input
+                id="privacyConsent"
+                type="checkbox"
+                checked={privacyConsent}
+                onChange={(e) => setPrivacyConsent(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                required
+              />
+              <label htmlFor="privacyConsent" className="text-xs text-muted-foreground leading-tight">
+                I have read and accept the{' '}
+                <Link href="/privacy" target="_blank" className="text-primary hover:underline">
+                  privacy notice
+                </Link>
+                . I understand that my personal information will be processed as described therein.
+              </label>
             </div>
 
             {error && (
