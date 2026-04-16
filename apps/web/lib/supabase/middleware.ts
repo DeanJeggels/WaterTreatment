@@ -33,7 +33,8 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/auth');
 
   const isPublicPage = request.nextUrl.pathname.startsWith('/shared/') ||
-    request.nextUrl.pathname === '/api/stripe/webhook';
+    request.nextUrl.pathname === '/api/stripe/webhook' ||
+    request.nextUrl.pathname === '/privacy';
 
   if (!user && !isAuthPage && !isPublicPage && request.nextUrl.pathname !== '/') {
     const url = request.nextUrl.clone();
