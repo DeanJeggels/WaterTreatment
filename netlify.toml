@@ -5,6 +5,17 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# Security headers (M1)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+    Content-Security-Policy = "default-src 'self'; connect-src 'self' https://otikhvpmjijwgnabxspd.supabase.co wss://otikhvpmjijwgnabxspd.supabase.co https://api.stripe.com; script-src 'self' https://js.stripe.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src https://js.stripe.com https://hooks.stripe.com;"
+
 # Environment variables to set in Netlify UI:
 # NEXT_PUBLIC_SUPABASE_URL
 # NEXT_PUBLIC_SUPABASE_ANON_KEY
