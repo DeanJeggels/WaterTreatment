@@ -23,37 +23,24 @@ export default function SharedFlowsheetPage() {
     async function load() {
       const supabase = createClient();
 
-      // Look up share link (anon access via RLS policy)
-      const { data: link, error: linkErr } = await supabase
-        .from('share_links')
-        .select('flowsheet_id')
-        .eq('token', params.token)
-        .eq('is_active', true)
+      // Single RPC call replaces the broken two-query pattern.
+      // get_shared_flowsheet is a SECURITY DEFINER function that validates
+      // the token, checks is_active + expiry, and returns only the columns
+      // the shared page needs (no proposal_data, no PII).
+      const { data, error: rpcErr } = await supabase
+        .rpc('get_shared_flowsheet', { p_token: params.token })
         .single();
 
-      if (linkErr || !link) {
+      if (rpcErr || !data) {
         setError('This share link is invalid or has expired.');
         setLoading(false);
         return;
       }
 
-      // Fetch flowsheet data (anon access via flowsheets_shared_read policy)
-      const { data: flowsheet, error: fsErr } = await supabase
-        .from('flowsheets')
-        .select('name, graph_data, project_id')
-        .eq('id', link.flowsheet_id)
-        .single();
-
-      if (fsErr || !flowsheet) {
-        setError('Flowsheet not found.');
-        setLoading(false);
-        return;
-      }
-
-      const graphData = flowsheet.graph_data as { nodes?: any[]; edges?: any[] };
-      if (graphData.nodes) setNodes(graphData.nodes);
-      if (graphData.edges) setEdges(graphData.edges);
-      setFlowsheetName(flowsheet.name ?? 'Shared Flowsheet');
+      const graphData = (data as { graph_data?: { nodes?: any[]; edges?: any[] } }).graph_data;
+      if (graphData?.nodes) setNodes(graphData.nodes);
+      if (graphData?.edges) setEdges(graphData.edges);
+      setFlowsheetName((data as { name?: string }).name ?? 'Shared Flowsheet');
       setProjectName('Shared View');
       setLoading(false);
     }
