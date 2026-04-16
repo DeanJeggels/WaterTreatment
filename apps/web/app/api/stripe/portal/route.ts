@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('Stripe portal error:', err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Portal session failed' },
+      { error: 'Billing portal unavailable. Please try again or contact support.' },
       { status: 500 }
     );
   }
