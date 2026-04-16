@@ -306,7 +306,10 @@ export default function LandingPage() {
       <footer className="border-t border-border/50 py-8 px-4">
         <div className="container mx-auto flex items-center justify-between text-sm text-muted-foreground">
           <span>AquaSim by CH-ISE (PTY) LTD</span>
-          <span>Wastewater design & proposal generator</span>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <span>Wastewater design & proposal generator</span>
+          </div>
         </div>
       </footer>
     </div>
