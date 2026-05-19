@@ -247,6 +247,11 @@ describe('BioreactorAerobic', () => {
     expect(r.outputs.imlr!.TSS).toBeCloseTo(r.outputs.out!.TSS, 3);
     expect(r.outputs.out!.flow).toBeCloseTo(1000, 0);
   });
+
+  it('marks only volume + SRT as essential, rest advanced', () => {
+    const essential = bioreactorAerobicDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual(['volume', 'srt']);
+  });
 });
 
 describe('BioreactorAerobic — Phase 1b', () => {

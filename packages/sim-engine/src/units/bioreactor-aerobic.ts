@@ -7,15 +7,15 @@ const DIFFUSER_PER_M3 = 1 / 3;
 
 const parameterSchema: ParameterField[] = [
   { key: 'volume', label: 'Volume', unit: 'm³', min: 100, max: 100000, step: 100, defaultValue: 5000 },
-  { key: 'depth', label: 'Depth', unit: 'm', min: 3, max: 8, step: 0.5, defaultValue: 4.5 },
-  { key: 'do_setpoint', label: 'DO Setpoint', unit: 'mg/L', min: 0.5, max: 6, step: 0.1, defaultValue: 2.0 },
+  { key: 'depth', label: 'Depth', unit: 'm', min: 3, max: 8, step: 0.5, defaultValue: 4.5, advanced: true },
+  { key: 'do_setpoint', label: 'DO Setpoint', unit: 'mg/L', min: 0.5, max: 6, step: 0.1, defaultValue: 2.0, advanced: true },
   { key: 'srt', label: 'SRT', unit: 'days', min: 3, max: 40, step: 1, defaultValue: 12, description: 'Solids Retention Time' },
-  { key: 'yield_obs', label: 'Observed Yield', unit: 'gVSS/gCOD', min: 0.2, max: 0.8, step: 0.05, defaultValue: 0.45 },
-  { key: 'nitrification_eff', label: 'Nitrification Efficiency', unit: '%', min: 0, max: 100, step: 5, defaultValue: 95 },
-  { key: 'cod_removal_eff', label: 'Soluble COD Removal', unit: '%', min: 70, max: 99, step: 1, defaultValue: 90 },
-  { key: 'bod_removal_eff', label: 'BOD Removal', unit: '%', min: 80, max: 99, step: 1, defaultValue: 95 },
-  { key: 'kd', label: 'Decay Rate', unit: '1/d', min: 0.02, max: 0.15, step: 0.01, defaultValue: 0.06 },
-  { key: 'imlr_ratio', label: 'IMLR Ratio (a)', unit: '× Q_in', min: 0, max: 8, step: 0.5, defaultValue: 4, description: 'Internal mixed liquor recycle from aerobic back to anoxic. 4× is typical for BNR. Set to 0 to disable.' },
+  { key: 'yield_obs', label: 'Observed Yield', unit: 'gVSS/gCOD', min: 0.2, max: 0.8, step: 0.05, defaultValue: 0.45, advanced: true },
+  { key: 'nitrification_eff', label: 'Nitrification Efficiency', unit: '%', min: 0, max: 100, step: 5, defaultValue: 95, advanced: true },
+  { key: 'cod_removal_eff', label: 'Soluble COD Removal', unit: '%', min: 70, max: 99, step: 1, defaultValue: 90, advanced: true },
+  { key: 'bod_removal_eff', label: 'BOD Removal', unit: '%', min: 80, max: 99, step: 1, defaultValue: 95, advanced: true },
+  { key: 'kd', label: 'Decay Rate', unit: '1/d', min: 0.02, max: 0.15, step: 0.01, defaultValue: 0.06, advanced: true },
+  { key: 'imlr_ratio', label: 'IMLR Ratio (a)', unit: '× Q_in', min: 0, max: 8, step: 0.5, defaultValue: 4, description: 'Internal mixed liquor recycle from aerobic back to anoxic. 4× is typical for BNR. Set to 0 to disable.', advanced: true },
 ];
 
 export const bioreactorAerobicDefinition: UnitDefinition = {
