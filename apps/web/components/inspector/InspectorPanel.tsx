@@ -21,6 +21,7 @@ import { EnergySection } from './EnergySection';
 import { ConsumablesSection } from './ConsumablesSection';
 import { CalculationRecordsSection } from './CalculationRecordsSection';
 import { BoqSection } from './BoqSection';
+import { DesignSummarySection } from './DesignSummarySection';
 
 export default function InspectorPanel() {
   const { nodes, selectedNodeId, updateNodeData } = useFlowsheetStore();
@@ -37,12 +38,15 @@ export default function InspectorPanel() {
 
   if (!selectedNode) {
     return (
-      <div className="w-80 border-l border-border bg-card/30 p-4">
-        <EmptyState
-          icon={MousePointer2}
-          title="No unit selected"
-          description="Click a process unit on the canvas to configure its parameters and view its calculation trail."
-        />
+      <div className="w-80 border-l border-border bg-card/30 overflow-y-auto">
+        <div className="p-4 space-y-4">
+          <DesignSummarySection results={results} />
+          <EmptyState
+            icon={MousePointer2}
+            title="No unit selected"
+            description="Click a process unit on the canvas to configure its parameters and view its calculation trail."
+          />
+        </div>
       </div>
     );
   }
@@ -100,6 +104,9 @@ export default function InspectorPanel() {
         </div>
 
         <Separator />
+
+        {/* Plant-wide Design Summary — visible regardless of selected node */}
+        <DesignSummarySection results={results} />
 
         {/* Warnings first — impossible to miss */}
         <WarningsSection warnings={nodeResult?.warnings} />
