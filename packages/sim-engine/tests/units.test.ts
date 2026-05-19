@@ -220,6 +220,22 @@ describe('BioreactorAerobic', () => {
     const result = unit.process([typicalInfluent()]);
     assertValidV2Outputs(result);
   });
+
+  it('emits an imlr output stream sized by imlr_ratio × inlet flow', () => {
+    const unit = new BioreactorAerobic({
+      volume: 5000, srt: 12, do_setpoint: 2.0, yield_obs: 0.45,
+      nitrification_eff: 95, cod_removal_eff: 90, bod_removal_eff: 95,
+      kd: 0.06, depth: 4.5, imlr_ratio: 4,
+    });
+    const inf = { ...emptyWaterQuality(), flow: 1000, COD: 500, sCOD: 200, BOD5: 250, TKN: 40, NH3N: 25, TSS: 250, VSS: 200, temperature: 20, pH: 7.2, alkalinity: 5 };
+    const r = unit.process([inf]);
+    expect(r.outputs.out).toBeDefined();
+    expect(r.outputs.imlr).toBeDefined();
+    expect(r.outputs.imlr!.flow).toBeCloseTo(4000, 0);
+    expect(r.outputs.imlr!.NO3N).toBeCloseTo(r.outputs.out!.NO3N, 3);
+    expect(r.outputs.imlr!.TSS).toBeCloseTo(r.outputs.out!.TSS, 3);
+    expect(r.outputs.out!.flow).toBeCloseTo(1000, 0);
+  });
 });
 
 describe('BioreactorAerobic — Phase 1b', () => {
