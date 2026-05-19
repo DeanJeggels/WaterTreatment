@@ -843,6 +843,11 @@ describe('MBR', () => {
     const r = unit.process([{ ...emptyWaterQuality(), flow: 0 }]);
     expect(r.outputs.permeate.flow).toBe(0);
   });
+
+  it('marks only flux as essential, rest advanced', () => {
+    const essential = mbrDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual(['flux_lmh']);
+  });
 });
 
 describe('AerationBlower', () => {
