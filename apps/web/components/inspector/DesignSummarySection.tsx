@@ -1,11 +1,12 @@
 'use client';
 
 import type { SimulationResults, WaterQuality } from '@repo/sim-engine';
+import type { FlowsheetNode } from '@/stores/flowsheet-store';
 import { InspectorSection } from './InspectorSection';
 
 interface Props {
   results: SimulationResults | null;
-  nodes: Array<{ id: string; data: { label?: string; unitType?: string } }>;
+  nodes: FlowsheetNode[];
 }
 
 interface SummaryRow {
@@ -94,10 +95,12 @@ export function DesignSummarySection({ results, nodes }: Props) {
     const label = labelOf(en.id);
     effluentRows.push({ label: `${label} flow`, value: formatNumber(wq.flow, 0), unit: 'm³/d' });
     effluentRows.push({ label: `${label} COD`, value: formatNumber(wq.COD, 1), unit: 'mg/L' });
+    effluentRows.push({ label: `${label} BOD₅`, value: formatNumber(wq.BOD5, 1), unit: 'mg/L' });
     effluentRows.push({ label: `${label} TSS`, value: formatNumber(wq.TSS, 1), unit: 'mg/L' });
     effluentRows.push({ label: `${label} NH₃-N`, value: formatNumber(wq.NH3N, 2), unit: 'mgN/L' });
     effluentRows.push({ label: `${label} NO₃-N`, value: formatNumber(wq.NO3N, 2), unit: 'mgN/L' });
     effluentRows.push({ label: `${label} TP`, value: formatNumber(wq.TP, 2), unit: 'mgP/L' });
+    effluentRows.push({ label: `${label} pH`, value: formatNumber(wq.pH, 1) });
   }
 
   if (rows.length === 0 && effluentRows.length === 0) return null;
