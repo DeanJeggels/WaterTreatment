@@ -886,6 +886,11 @@ describe('AerationBlower', () => {
     assertHasCalculationRecord(r.calculationRecords, 'blower power');
     assertAllRecordsValid(r.calculationRecords);
   });
+
+  it('has no essential parameters — all configuration is advanced', () => {
+    const essential = aerationBlowerDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual([]);
+  });
 });
 
 describe('Dewatering', () => {

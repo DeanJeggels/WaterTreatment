@@ -5,9 +5,9 @@ import { getPrice } from '@repo/design-library';
 const HST_THRESHOLD_KW = 50;
 
 const parameterSchema: ParameterField[] = [
-  { key: 'ote', label: 'Overall transfer efficiency', unit: '', min: 0.05, max: 0.15, step: 0.005, defaultValue: 0.08 },
-  { key: 'diffuser_depth_m', label: 'Diffuser submergence', unit: 'm', min: 2, max: 8, step: 0.5, defaultValue: 4.5 },
-  { key: 'o2_demand_kg_per_day', label: 'O₂ demand (manual override)', unit: 'kgO/d', min: 0, max: 20000, step: 10, defaultValue: 0, description: 'Leave at 0 to auto-pull from the connected aerobic reactor.' },
+  { key: 'ote', label: 'Overall transfer efficiency', unit: '', min: 0.05, max: 0.15, step: 0.005, defaultValue: 0.08, advanced: true },
+  { key: 'diffuser_depth_m', label: 'Diffuser submergence', unit: 'm', min: 2, max: 8, step: 0.5, defaultValue: 4.5, advanced: true },
+  { key: 'o2_demand_kg_per_day', label: 'O₂ demand (manual override)', unit: 'kgO/d', min: 0, max: 20000, step: 10, defaultValue: 0, description: 'Leave at 0 to auto-pull from the connected aerobic reactor.', advanced: true },
 ];
 
 export const aerationBlowerDefinition: UnitDefinition = {
