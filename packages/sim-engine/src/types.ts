@@ -92,6 +92,8 @@ export interface ParameterField {
   step: number;
   defaultValue: number;
   description?: string;
+  /** When true, hidden behind the inspector's "Show advanced" disclosure. Defaults to undefined (essential, always visible). */
+  advanced?: boolean;
 }
 
 /** All supported process unit types */
