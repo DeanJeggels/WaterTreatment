@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFlowsheetStore } from '@/stores/flowsheet-store';
 import { useSimulationStore } from '@/stores/simulation-store';
 import { unitDefinitions } from '@repo/sim-engine';
@@ -26,6 +26,10 @@ export default function InspectorPanel() {
   const { nodes, selectedNodeId, updateNodeData } = useFlowsheetStore();
   const { results } = useSimulationStore();
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  useEffect(() => {
+    setShowAdvanced(false);
+  }, [selectedNodeId]);
 
   const selectedNode = selectedNodeId
     ? nodes.find((n) => n.id === selectedNodeId)
