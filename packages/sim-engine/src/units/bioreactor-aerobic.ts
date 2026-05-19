@@ -15,6 +15,7 @@ const parameterSchema: ParameterField[] = [
   { key: 'cod_removal_eff', label: 'Soluble COD Removal', unit: '%', min: 70, max: 99, step: 1, defaultValue: 90 },
   { key: 'bod_removal_eff', label: 'BOD Removal', unit: '%', min: 80, max: 99, step: 1, defaultValue: 95 },
   { key: 'kd', label: 'Decay Rate', unit: '1/d', min: 0.02, max: 0.15, step: 0.01, defaultValue: 0.06 },
+  { key: 'imlr_ratio', label: 'IMLR Ratio (a)', unit: '× Q_in', min: 0, max: 8, step: 0.5, defaultValue: 4, description: 'Internal mixed liquor recycle from aerobic back to anoxic. 4× is typical for BNR. Set to 0 to disable.' },
 ];
 
 export const bioreactorAerobicDefinition: UnitDefinition = {
@@ -25,6 +26,7 @@ export const bioreactorAerobicDefinition: UnitDefinition = {
   handles: [
     { id: 'in', label: 'Inflow', position: 'left', type: 'input' },
     { id: 'out', label: 'Outflow', position: 'right', type: 'output' },
+    { id: 'imlr', label: 'IMLR (recycle)', position: 'top', type: 'output' },
   ],
   defaultParameters: Object.fromEntries(parameterSchema.map(p => [p.key, p.defaultValue])),
   parameterSchema,
@@ -108,6 +110,9 @@ export class BioreactorAerobic implements ProcessUnit {
       DO: doSetpoint,
       temperature: inf.temperature,
     };
+
+    const imlrRatio = p.imlr_ratio ?? 4;
+    const imlr: WaterQuality = { ...output, flow: inf.flow * imlrRatio };
 
     const depth = p.depth ?? 4.5;
     const o2TotalKgPerD = ((Math.max(0, o2Carbonaceous) + o2Nitrification) * inf.flow) / 1000;
@@ -212,7 +217,7 @@ export class BioreactorAerobic implements ProcessUnit {
     if (mlss < 2000) base.warnings.push(`MLSS = ${mlss.toFixed(0)} mg/L < 2000. Reactor may be underloaded.`);
 
     return {
-      outputs: { out: output },
+      outputs: { out: output, imlr },
       metadata: {
         HRT_hours: hrt * 24,
         SRT_days: srt,
@@ -223,6 +228,8 @@ export class BioreactorAerobic implements ProcessUnit {
         O2_demand_total: Math.max(0, o2Carbonaceous) + o2Nitrification,
         biomass_produced: biomassProduced,
         NH3_oxidized: nh3Oxidized,
+        IMLR_ratio: imlrRatio,
+        IMLR_flow: inf.flow * imlrRatio,
       },
       ...base,
     };
