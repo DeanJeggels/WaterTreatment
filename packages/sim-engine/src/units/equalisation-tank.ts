@@ -7,7 +7,7 @@ const MIXER_KW_PER_UNIT = 3;
 
 const parameterSchema: ParameterField[] = [
   { key: 'hrt_hours', label: 'HRT', unit: 'h', min: 2, max: 24, step: 0.5, defaultValue: 6 },
-  { key: 'depth', label: 'Depth', unit: 'm', min: 3, max: 8, step: 0.5, defaultValue: 4.5 },
+  { key: 'depth', label: 'Depth', unit: 'm', min: 3, max: 8, step: 0.5, defaultValue: 4.5, advanced: true },
 ];
 
 export const equalisationTankDefinition: UnitDefinition = {

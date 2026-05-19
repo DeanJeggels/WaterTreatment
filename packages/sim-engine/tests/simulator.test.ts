@@ -343,6 +343,45 @@ function fixtureToLiteNodes(nodes: GraphNode[]): FlowsheetNodeLite[] {
   }));
 }
 
+describe('Simulator: blower auto-derives O2 from upstream aerobic', () => {
+  it('blower auto-derives O2 demand from the connected aerobic reactor', () => {
+    const nodes: GraphNode[] = [
+      { id: 'inf', type: 'influent', data: { unitType: 'influent', parameters: { flow: 1000, COD: 500, sCOD: 200, BOD5: 250, TKN: 40, NH3N: 25, NO3N: 0.5, TP: 8, TSS: 250, VSS: 200, pH: 7.2, alkalinity: 5, DO: 0, temperature: 20 } } },
+      { id: 'aer', type: 'bioreactor_aerobic', data: { unitType: 'bioreactor_aerobic', parameters: { volume: 5000, srt: 12, do_setpoint: 2, yield_obs: 0.45, nitrification_eff: 95, cod_removal_eff: 90, bod_removal_eff: 95, kd: 0.06, depth: 4.5, imlr_ratio: 0 } } },
+      { id: 'blw', type: 'aeration_blower', data: { unitType: 'aeration_blower', parameters: { ote: 0.08, diffuser_depth_m: 4.5, o2_demand_kg_per_day: 0 } } },
+    ];
+    const edges: GraphEdge[] = [
+      { id: 'e1', source: 'inf', target: 'aer', sourceHandle: 'out', targetHandle: 'in' },
+      { id: 'e2', source: 'aer', target: 'blw', sourceHandle: 'out', targetHandle: 'aerobic_link' },
+    ];
+
+    const r = simulate(nodes, edges);
+
+    expect(r.converged).toBe(true);
+    const aerMeta = r.nodeResults['aer'].metadata!;
+    const blwMeta = r.nodeResults['blw'].metadata!;
+
+    // The blower should pick up the aerobic's per-litre O2 demand × flow ÷ 1000 → kg/d
+    const expectedO2_kgPerD = (aerMeta.O2_demand_total as number) * (aerMeta.flow_for_O2 as number) / 1000;
+    expect(blwMeta.o2_used_kg_per_day).toBeCloseTo(expectedO2_kgPerD, 2);
+    expect(blwMeta.o2_source).toBe('upstream_aerobic');
+    expect(blwMeta.installedKW as number).toBeGreaterThan(0);
+  });
+
+  it('blower reports disconnected and warns when no upstream and no manual O2', () => {
+    const nodes: GraphNode[] = [
+      { id: 'blw', type: 'aeration_blower', data: { unitType: 'aeration_blower', parameters: { ote: 0.08, diffuser_depth_m: 4.5, o2_demand_kg_per_day: 0 } } },
+    ];
+    const edges: GraphEdge[] = [];
+    const r = simulate(nodes, edges);
+    const blwMeta = r.nodeResults['blw'].metadata!;
+    expect(blwMeta.o2_source).toBe('disconnected');
+    expect(blwMeta.o2_used_kg_per_day).toBe(0);
+    expect(blwMeta.installedKW).toBe(0);
+    expect(r.nodeResults['blw'].warnings).toContain('Blower has no O₂ source — wire an aerobic reactor to the "O₂ demand link" handle or set a manual O₂ demand.');
+  });
+});
+
 describe('BoQ engine — full plant integration', () => {
   it('aggregates total capex from a full plant train including orphan blower', () => {
     const { nodes, edges } = buildFullPlantFixture();
@@ -373,5 +412,42 @@ describe('BoQ engine — full plant integration', () => {
 
     expect(boqWithBlower.grandTotal).toBeGreaterThan(boqWithoutBlower.grandTotal);
     expect(boqWithBlower.nodeCount).toBeGreaterThan(boqWithoutBlower.nodeCount);
+  });
+});
+
+describe('Simulator: full BNR-MBR plant with IMLR recycle', () => {
+  it('converges with anoxic + aerobic + IMLR back-edge', () => {
+    const nodes: GraphNode[] = [
+      { id: 'inf', type: 'influent', data: { unitType: 'influent', parameters: { flow: 1000, COD: 500, sCOD: 200, BOD5: 250, TKN: 40, NH3N: 25, NO3N: 0.5, TP: 8, TSS: 250, VSS: 200, pH: 7.2, alkalinity: 5, DO: 0, temperature: 20 } } },
+      { id: 'eq',  type: 'equalisation_tank', data: { unitType: 'equalisation_tank', parameters: { hrt_hours: 6, depth: 4.5 } } },
+      { id: 'anx', type: 'bioreactor_anoxic', data: { unitType: 'bioreactor_anoxic', parameters: { volume: 1500, depth: 4.5, denitrification_eff: 85, cod_n_ratio: 6 } } },
+      { id: 'aer', type: 'bioreactor_aerobic', data: { unitType: 'bioreactor_aerobic', parameters: { volume: 5000, srt: 12, do_setpoint: 2, yield_obs: 0.45, nitrification_eff: 95, cod_removal_eff: 90, bod_removal_eff: 95, kd: 0.06, depth: 4.5, imlr_ratio: 4 } } },
+      { id: 'mbr', type: 'mbr', data: { unitType: 'mbr', parameters: { flux_lmh: 18.4, operational_fraction: 0.8, module_area_m2: 64 } } },
+      { id: 'eff', type: 'effluent', data: { unitType: 'effluent', parameters: {} } },
+      { id: 'blw', type: 'aeration_blower', data: { unitType: 'aeration_blower', parameters: { ote: 0.08, diffuser_depth_m: 4.5, o2_demand_kg_per_day: 0 } } },
+    ];
+    const edges: GraphEdge[] = [
+      { id: 'e1', source: 'inf', target: 'eq',  sourceHandle: 'out',  targetHandle: 'in' },
+      { id: 'e2', source: 'eq',  target: 'anx', sourceHandle: 'out',  targetHandle: 'in' },
+      { id: 'e3', source: 'anx', target: 'aer', sourceHandle: 'out',  targetHandle: 'in' },
+      { id: 'e4', source: 'aer', target: 'mbr', sourceHandle: 'out',  targetHandle: 'in' },
+      { id: 'e5', source: 'mbr', target: 'eff', sourceHandle: 'permeate', targetHandle: 'in' },
+      // IMLR recycle (back-edge):
+      { id: 'e6', source: 'aer', target: 'anx', sourceHandle: 'imlr', targetHandle: 'in' },
+      // Blower data link:
+      { id: 'e7', source: 'aer', target: 'blw', sourceHandle: 'out',  targetHandle: 'aerobic_link' },
+    ];
+
+    const r = simulate(nodes, edges);
+
+    expect(r.converged).toBe(true);
+    expect(r.iterations).toBeLessThan(50);
+    // Final effluent flow at steady state should approximately equal raw influent (minus tiny MBR reject)
+    const effFlow = r.nodeResults['eff'].outputs.out!.flow;
+    expect(effFlow).toBeGreaterThan(900); // permeate is 98% of MBR inflow which is 100% of aerobic outflow which equals raw influent flow
+    expect(effFlow).toBeLessThan(1010);
+    // Blower picks up O2 from upstream aerobic
+    expect(r.nodeResults['blw'].metadata!.o2_source).toBe('upstream_aerobic');
+    expect(r.nodeResults['blw'].metadata!.installedKW as number).toBeGreaterThan(0);
   });
 });

@@ -1,9 +1,10 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useFlowsheetStore } from '@/stores/flowsheet-store';
 import { useSimulationStore } from '@/stores/simulation-store';
 import { unitDefinitions } from '@repo/sim-engine';
-import type { WaterQuality } from '@repo/sim-engine';
+import type { ParameterField, WaterQuality } from '@repo/sim-engine';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -20,10 +21,16 @@ import { EnergySection } from './EnergySection';
 import { ConsumablesSection } from './ConsumablesSection';
 import { CalculationRecordsSection } from './CalculationRecordsSection';
 import { BoqSection } from './BoqSection';
+import { DesignSummarySection } from './DesignSummarySection';
 
 export default function InspectorPanel() {
   const { nodes, selectedNodeId, updateNodeData } = useFlowsheetStore();
   const { results } = useSimulationStore();
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  useEffect(() => {
+    setShowAdvanced(false);
+  }, [selectedNodeId]);
 
   const selectedNode = selectedNodeId
     ? nodes.find((n) => n.id === selectedNodeId)
@@ -31,12 +38,15 @@ export default function InspectorPanel() {
 
   if (!selectedNode) {
     return (
-      <div className="w-80 border-l border-border bg-card/30 p-4">
-        <EmptyState
-          icon={MousePointer2}
-          title="No unit selected"
-          description="Click a process unit on the canvas to configure its parameters and view its calculation trail."
-        />
+      <div className="w-80 border-l border-border bg-card/30 overflow-y-auto">
+        <div className="p-4 space-y-4">
+          <DesignSummarySection results={results} nodes={nodes} />
+          <EmptyState
+            icon={MousePointer2}
+            title="No unit selected"
+            description="Click a process unit on the canvas to configure its parameters and view its calculation trail."
+          />
+        </div>
       </div>
     );
   }
@@ -46,6 +56,43 @@ export default function InspectorPanel() {
 
   const hasRecords = (nodeResult?.calculationRecords?.length ?? 0) > 0;
   const hasMetadata = nodeResult && Object.keys(nodeResult.metadata ?? {}).length > 0;
+
+  const essentials = def.parameterSchema.filter((p) => !p.advanced);
+  const advanceds = def.parameterSchema.filter((p) => p.advanced);
+
+  const renderField = (param: ParameterField) => (
+    <div key={param.key} className="space-y-1">
+      <div className="flex items-center gap-1">
+        <Label htmlFor={param.key} className="text-xs">
+          {param.label}
+          {param.unit ? (
+            <span className="text-muted-foreground ml-1">({param.unit})</span>
+          ) : null}
+        </Label>
+        {param.description && <HelpTooltip text={param.description} />}
+      </div>
+      <Input
+        id={param.key}
+        type="number"
+        min={param.min}
+        max={param.max}
+        step={param.step}
+        value={selectedNode.data.parameters[param.key] ?? param.defaultValue}
+        onChange={(e) => {
+          const val = parseFloat(e.target.value);
+          if (!isNaN(val)) {
+            updateNodeData(selectedNode.id, {
+              parameters: {
+                ...selectedNode.data.parameters,
+                [param.key]: val,
+              },
+            });
+          }
+        }}
+        className="h-8 text-sm font-mono"
+      />
+    </div>
+  );
 
   return (
     <div className="w-80 border-l border-border bg-card/30 overflow-y-auto">
@@ -58,6 +105,9 @@ export default function InspectorPanel() {
 
         <Separator />
 
+        {/* Plant-wide Design Summary — visible regardless of selected node */}
+        <DesignSummarySection results={results} nodes={nodes} />
+
         {/* Warnings first — impossible to miss */}
         <WarningsSection warnings={nodeResult?.warnings} />
 
@@ -65,39 +115,24 @@ export default function InspectorPanel() {
         {def.parameterSchema.length > 0 && (
           <InspectorSection title="Configuration">
             <div className="space-y-3">
-              {def.parameterSchema.map((param) => (
-                <div key={param.key} className="space-y-1">
-                  <div className="flex items-center gap-1">
-                    <Label htmlFor={param.key} className="text-xs">
-                      {param.label}
-                      {param.unit ? (
-                        <span className="text-muted-foreground ml-1">({param.unit})</span>
-                      ) : null}
-                    </Label>
-                    {param.description && <HelpTooltip text={param.description} />}
-                  </div>
-                  <Input
-                    id={param.key}
-                    type="number"
-                    min={param.min}
-                    max={param.max}
-                    step={param.step}
-                    value={selectedNode.data.parameters[param.key] ?? param.defaultValue}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value);
-                      if (!isNaN(val)) {
-                        updateNodeData(selectedNode.id, {
-                          parameters: {
-                            ...selectedNode.data.parameters,
-                            [param.key]: val,
-                          },
-                        });
-                      }
-                    }}
-                    className="h-8 text-sm font-mono"
-                  />
-                </div>
-              ))}
+              {essentials.length === 0 && advanceds.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  This unit has no required configuration. Show advanced settings to see optional parameters.
+                </p>
+              )}
+              {essentials.map(renderField)}
+              {advanceds.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced((s) => !s)}
+                    className="text-xs text-muted-foreground hover:text-foreground underline mt-2"
+                  >
+                    {showAdvanced ? 'Hide' : 'Show'} advanced settings ({advanceds.length})
+                  </button>
+                  {showAdvanced && advanceds.map(renderField)}
+                </>
+              )}
             </div>
           </InspectorSection>
         )}
