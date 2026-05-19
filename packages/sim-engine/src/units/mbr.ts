@@ -8,8 +8,8 @@ const MBR_OPERATIONAL_FRACTION = 0.8;
 
 const parameterSchema: ParameterField[] = [
   { key: 'flux_lmh', label: 'Design flux', unit: 'L/m²/h', min: 10, max: 30, step: 0.5, defaultValue: 18.4 },
-  { key: 'operational_fraction', label: 'Operational fraction', unit: '', min: 0.5, max: 1.0, step: 0.05, defaultValue: 0.8 },
-  { key: 'module_area_m2', label: 'Module area', unit: 'm²', min: 20, max: 200, step: 1, defaultValue: 64 },
+  { key: 'operational_fraction', label: 'Operational fraction', unit: '', min: 0.5, max: 1.0, step: 0.05, defaultValue: 0.8, advanced: true },
+  { key: 'module_area_m2', label: 'Module area', unit: 'm²', min: 20, max: 200, step: 1, defaultValue: 64, advanced: true },
 ];
 
 export const mbrDefinition: UnitDefinition = {
