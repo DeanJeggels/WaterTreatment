@@ -40,7 +40,7 @@ export default function InspectorPanel() {
     return (
       <div className="w-80 border-l border-border bg-card/30 overflow-y-auto">
         <div className="p-4 space-y-4">
-          <DesignSummarySection results={results} />
+          <DesignSummarySection results={results} nodes={nodes} />
           <EmptyState
             icon={MousePointer2}
             title="No unit selected"
@@ -106,7 +106,7 @@ export default function InspectorPanel() {
         <Separator />
 
         {/* Plant-wide Design Summary — visible regardless of selected node */}
-        <DesignSummarySection results={results} />
+        <DesignSummarySection results={results} nodes={nodes} />
 
         {/* Warnings first — impossible to miss */}
         <WarningsSection warnings={nodeResult?.warnings} />
