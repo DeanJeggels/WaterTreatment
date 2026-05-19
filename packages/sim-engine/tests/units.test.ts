@@ -242,10 +242,11 @@ describe('BioreactorAerobic', () => {
     const r = unit.process([inf]);
     expect(r.outputs.out).toBeDefined();
     expect(r.outputs.imlr).toBeDefined();
-    expect(r.outputs.imlr!.flow).toBeCloseTo(4000, 0);
+    expect(r.outputs.imlr!.flow).toBeCloseTo(800, 0);
     expect(r.outputs.imlr!.NO3N).toBeCloseTo(r.outputs.out!.NO3N, 3);
     expect(r.outputs.imlr!.TSS).toBeCloseTo(r.outputs.out!.TSS, 3);
-    expect(r.outputs.out!.flow).toBeCloseTo(1000, 0);
+    // Mass balance at single-pass: Q_in = Q_main_out + Q_IMLR ⇒ 1000 = 200 + 800
+    expect(r.outputs.out!.flow).toBeCloseTo(200, 0);
   });
 
   it('marks only volume + SRT as essential, rest advanced', () => {
