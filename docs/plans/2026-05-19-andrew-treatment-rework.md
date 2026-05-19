@@ -79,8 +79,8 @@ it('emits an imlr output stream sized by imlr_ratio × inlet flow', () => {
 
   expect(r.outputs.out).toBeDefined();
   expect(r.outputs.imlr).toBeDefined();
-  // IMLR flow = 4 × inlet
-  expect(r.outputs.imlr!.flow).toBeCloseTo(4000, 0);
+  // IMLR flow = (a / (1 + a)) × Q_mixed; for a=4, Q_mixed=1000 → 800
+  expect(r.outputs.imlr!.flow).toBeCloseTo(800, 0);
   // Both streams carry the SAME concentrations as the reactor (it's an internal split, not separation)
   expect(r.outputs.imlr!.NO3N).toBeCloseTo(r.outputs.out!.NO3N, 3);
   expect(r.outputs.imlr!.TSS).toBeCloseTo(r.outputs.out!.TSS, 3);
@@ -115,7 +115,10 @@ handles: [
 3c. In `process()`, after the `output: WaterQuality = { ... }` block (around line 110), build the IMLR stream:
 ```typescript
 const imlrRatio = p.imlr_ratio ?? 4;
-const imlr: WaterQuality = { ...output, flow: inf.flow * imlrRatio };
+// IMLR ratio is defined relative to RAW influent, not the mixed reactor inlet.
+// Q_IMLR = a × Q_raw = (a/(1+a)) × Q_mixed
+const imlrFlow = (inf.flow * imlrRatio) / (1 + imlrRatio);
+const imlr: WaterQuality = { ...output, flow: imlrFlow };
 ```
 
 3d. Change the return at the bottom to include `imlr`:
