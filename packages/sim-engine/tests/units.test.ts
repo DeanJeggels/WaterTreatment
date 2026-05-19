@@ -806,6 +806,11 @@ describe('EqualisationTank', () => {
     assertHasCalculationRecord(r.calculationRecords, 'HRT');
     assertAllRecordsValid(r.calculationRecords);
   });
+
+  it('marks only HRT as essential', () => {
+    const essential = equalisationTankDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual(['hrt_hours']);
+  });
 });
 
 describe('MBR', () => {
