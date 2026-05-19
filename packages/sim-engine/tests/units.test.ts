@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   Influent,
+  influentDefinition,
   PrimaryClarifier,
   BioreactorAerobic,
+  bioreactorAerobicDefinition,
   BioreactorAnoxic,
+  bioreactorAnoxicDefinition,
   BioreactorAnaerobic,
   SecondaryClarifier,
   Splitter,
@@ -16,8 +19,11 @@ import {
   Screen,
   GritRemoval,
   EqualisationTank,
+  equalisationTankDefinition,
   MBR,
+  mbrDefinition,
   AerationBlower,
+  aerationBlowerDefinition,
   Dewatering,
   ChemicalDosing,
   UvDisinfection,
@@ -69,6 +75,11 @@ describe('Influent', () => {
     expect(flowRecord.result.unit).toBe('m3/d');
     expect(flowRecord.citation).toContain('User input');
     assertAllRecordsValid(result.calculationRecords);
+  });
+
+  it('marks only flow / COD / TKN as essential, rest advanced', () => {
+    const essential = influentDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual(['flow', 'COD', 'TKN']);
   });
 });
 
@@ -220,6 +231,28 @@ describe('BioreactorAerobic', () => {
     const result = unit.process([typicalInfluent()]);
     assertValidV2Outputs(result);
   });
+
+  it('emits an imlr output stream sized by imlr_ratio × inlet flow', () => {
+    const unit = new BioreactorAerobic({
+      volume: 5000, srt: 12, do_setpoint: 2.0, yield_obs: 0.45,
+      nitrification_eff: 95, cod_removal_eff: 90, bod_removal_eff: 95,
+      kd: 0.06, depth: 4.5, imlr_ratio: 4,
+    });
+    const inf = { ...emptyWaterQuality(), flow: 1000, COD: 500, sCOD: 200, BOD5: 250, TKN: 40, NH3N: 25, TSS: 250, VSS: 200, temperature: 20, pH: 7.2, alkalinity: 5 };
+    const r = unit.process([inf]);
+    expect(r.outputs.out).toBeDefined();
+    expect(r.outputs.imlr).toBeDefined();
+    expect(r.outputs.imlr!.flow).toBeCloseTo(800, 0);
+    expect(r.outputs.imlr!.NO3N).toBeCloseTo(r.outputs.out!.NO3N, 3);
+    expect(r.outputs.imlr!.TSS).toBeCloseTo(r.outputs.out!.TSS, 3);
+    // Mass balance at single-pass: Q_in = Q_main_out + Q_IMLR ⇒ 1000 = 200 + 800
+    expect(r.outputs.out!.flow).toBeCloseTo(200, 0);
+  });
+
+  it('marks only volume + SRT as essential, rest advanced', () => {
+    const essential = bioreactorAerobicDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual(['volume', 'srt']);
+  });
 });
 
 describe('BioreactorAerobic — Phase 1b', () => {
@@ -272,6 +305,11 @@ describe('BioreactorAnoxic', () => {
     const unit = new BioreactorAnoxic({ volume: 2000, denitrification_eff: 85, cod_n_ratio: 6 });
     const result = unit.process([typicalInfluent()]);
     assertValidV2Outputs(result);
+  });
+
+  it('marks only volume as essential, rest advanced', () => {
+    const essential = bioreactorAnoxicDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual(['volume']);
   });
 });
 
@@ -769,6 +807,11 @@ describe('EqualisationTank', () => {
     assertHasCalculationRecord(r.calculationRecords, 'HRT');
     assertAllRecordsValid(r.calculationRecords);
   });
+
+  it('marks only HRT as essential', () => {
+    const essential = equalisationTankDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual(['hrt_hours']);
+  });
 });
 
 describe('MBR', () => {
@@ -806,6 +849,11 @@ describe('MBR', () => {
     const r = unit.process([{ ...emptyWaterQuality(), flow: 0 }]);
     expect(r.outputs.permeate.flow).toBe(0);
   });
+
+  it('marks only flux as essential, rest advanced', () => {
+    const essential = mbrDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual(['flux_lmh']);
+  });
 });
 
 describe('AerationBlower', () => {
@@ -838,6 +886,11 @@ describe('AerationBlower', () => {
     assertHasCalculationRecord(r.calculationRecords, 'air flow');
     assertHasCalculationRecord(r.calculationRecords, 'blower power');
     assertAllRecordsValid(r.calculationRecords);
+  });
+
+  it('has no essential parameters — all configuration is advanced', () => {
+    const essential = aerationBlowerDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual([]);
   });
 });
 

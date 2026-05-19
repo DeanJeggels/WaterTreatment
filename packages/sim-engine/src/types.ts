@@ -41,7 +41,7 @@ export interface WaterQuality {
  */
 export interface ProcessResult {
   outputs: Record<string, WaterQuality>;
-  metadata: Record<string, number>;
+  metadata: Record<string, number | string>;
   /** v2 — sizing dimensions */
   sizing?: Record<string, Dimension>;
   /** v2 — energy demand */
@@ -92,6 +92,8 @@ export interface ParameterField {
   step: number;
   defaultValue: number;
   description?: string;
+  /** When true, hidden behind the inspector's "Show advanced" disclosure. Defaults to undefined (essential, always visible). */
+  advanced?: boolean;
 }
 
 /** All supported process unit types */
@@ -118,11 +120,16 @@ export type UnitType =
   | 'uv_disinfection'
   | 'inlet_pumping';
 
+export interface UpstreamContext {
+  /** Metadata from each upstream node, keyed by the targetHandle id of the edge into this unit. */
+  nodeMetadata: Record<string, Record<string, unknown>>;
+}
+
 /** Interface that every unit model must implement */
 export interface ProcessUnit {
   type: UnitType;
   parameters: Record<string, number>;
-  process(inputs: WaterQuality[]): ProcessResult;
+  process(inputs: WaterQuality[], upstreamContext?: UpstreamContext): ProcessResult;
 }
 
 /** Discharge compliance standards */
