@@ -212,6 +212,17 @@ export class BioreactorAerobic implements ProcessUnit {
         result: { value: o2Nitrification, unit: 'mgO/L' },
         citation: 'Ekama (1984) WRC TT-16/84, eq 4.21',
       },
+      {
+        label: 'Internal mixed liquor recycle',
+        symbol: 'Q_IMLR',
+        equation: 'Q_IMLR = a × Q_in',
+        inputs: {
+          a: { value: imlrRatio, unit: '× Q_in', source: 'user input (imlr_ratio)' },
+          Q_in: { value: inf.flow, unit: 'm3/d', source: 'inlet flow' },
+        },
+        result: { value: inf.flow * imlrRatio, unit: 'm3/d' },
+        citation: 'Metcalf & Eddy (2014) Ch. 8 — α-recycle 2-6× typical for BNR',
+      },
     ];
     if (mlss > 6000) base.warnings.push(`MLSS = ${mlss.toFixed(0)} mg/L > 6000. Consider MBR or more volume.`);
     if (mlss < 2000) base.warnings.push(`MLSS = ${mlss.toFixed(0)} mg/L < 2000. Reactor may be underloaded.`);
