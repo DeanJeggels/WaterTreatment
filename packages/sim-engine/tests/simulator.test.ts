@@ -367,6 +367,19 @@ describe('Simulator: blower auto-derives O2 from upstream aerobic', () => {
     expect(blwMeta.o2_source).toBe('upstream_aerobic');
     expect(blwMeta.installedKW as number).toBeGreaterThan(0);
   });
+
+  it('blower reports disconnected and warns when no upstream and no manual O2', () => {
+    const nodes: GraphNode[] = [
+      { id: 'blw', type: 'aeration_blower', data: { unitType: 'aeration_blower', parameters: { ote: 0.08, diffuser_depth_m: 4.5, o2_demand_kg_per_day: 0 } } },
+    ];
+    const edges: GraphEdge[] = [];
+    const r = simulate(nodes, edges);
+    const blwMeta = r.nodeResults['blw'].metadata!;
+    expect(blwMeta.o2_source).toBe('disconnected');
+    expect(blwMeta.o2_used_kg_per_day).toBe(0);
+    expect(blwMeta.installedKW).toBe(0);
+    expect(r.nodeResults['blw'].warnings).toContain('Blower has no O₂ source — wire an aerobic reactor to the "O₂ demand link" handle or set a manual O₂ demand.');
+  });
 });
 
 describe('BoQ engine — full plant integration', () => {

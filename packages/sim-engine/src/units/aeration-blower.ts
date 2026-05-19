@@ -31,11 +31,25 @@ export class AerationBlower implements ProcessUnit {
 
     const manualO2 = Math.max(0, p.o2_demand_kg_per_day ?? 0);
     const upstreamMeta = upstreamContext?.nodeMetadata?.aerobic_link;
-    const upstreamO2_mgPerL = typeof upstreamMeta?.O2_demand_total === 'number' ? upstreamMeta.O2_demand_total : 0;
-    const upstreamFlow = typeof upstreamMeta?.flow_for_O2 === 'number' ? upstreamMeta.flow_for_O2 : 0;
-    const upstreamO2_kgPerD = (upstreamO2_mgPerL * upstreamFlow) / 1000;
-    const o2 = manualO2 > 0 ? manualO2 : upstreamO2_kgPerD;
-    const o2Source: 'manual' | 'upstream_aerobic' = manualO2 > 0 ? 'manual' : 'upstream_aerobic';
+    const hasUpstream = upstreamMeta !== undefined
+      && typeof upstreamMeta.O2_demand_total === 'number'
+      && typeof upstreamMeta.flow_for_O2 === 'number';
+    const upstreamO2_kgPerD = hasUpstream
+      ? ((upstreamMeta.O2_demand_total as number) * (upstreamMeta.flow_for_O2 as number)) / 1000
+      : 0;
+
+    let o2: number;
+    let o2Source: 'manual' | 'upstream_aerobic' | 'disconnected';
+    if (manualO2 > 0) {
+      o2 = manualO2;
+      o2Source = 'manual';
+    } else if (hasUpstream) {
+      o2 = upstreamO2_kgPerD;
+      o2Source = 'upstream_aerobic';
+    } else {
+      o2 = 0;
+      o2Source = 'disconnected';
+    }
     const ote = Math.max(0.05, Math.min(0.15, p.ote ?? 0.08));
     const depth = p.diffuser_depth_m ?? 4.5;
 
@@ -116,6 +130,10 @@ export class AerationBlower implements ProcessUnit {
         citation: 'Metcalf & Eddy (2014) Ch. 5 — blower sizing',
       },
     ];
+
+    if (o2Source === 'disconnected') {
+      base.warnings.push('Blower has no O₂ source — wire an aerobic reactor to the "O₂ demand link" handle or set a manual O₂ demand.');
+    }
 
     return {
       outputs: {},
