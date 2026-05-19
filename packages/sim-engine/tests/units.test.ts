@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   Influent,
+  influentDefinition,
   PrimaryClarifier,
   BioreactorAerobic,
+  bioreactorAerobicDefinition,
   BioreactorAnoxic,
+  bioreactorAnoxicDefinition,
   BioreactorAnaerobic,
   SecondaryClarifier,
   Splitter,
@@ -16,8 +19,11 @@ import {
   Screen,
   GritRemoval,
   EqualisationTank,
+  equalisationTankDefinition,
   MBR,
+  mbrDefinition,
   AerationBlower,
+  aerationBlowerDefinition,
   Dewatering,
   ChemicalDosing,
   UvDisinfection,
@@ -69,6 +75,11 @@ describe('Influent', () => {
     expect(flowRecord.result.unit).toBe('m3/d');
     expect(flowRecord.citation).toContain('User input');
     assertAllRecordsValid(result.calculationRecords);
+  });
+
+  it('marks only flow / COD / TKN as essential, rest advanced', () => {
+    const essential = influentDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual(['flow', 'COD', 'TKN']);
   });
 });
 
