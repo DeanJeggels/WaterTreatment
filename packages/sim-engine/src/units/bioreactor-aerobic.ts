@@ -241,6 +241,7 @@ export class BioreactorAerobic implements ProcessUnit {
         NH3_oxidized: nh3Oxidized,
         IMLR_ratio: imlrRatio,
         IMLR_flow: inf.flow * imlrRatio,
+        flow_for_O2: inf.flow,
       },
       ...base,
     };

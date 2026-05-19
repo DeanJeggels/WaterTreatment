@@ -1,13 +1,13 @@
-import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
+import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField, UpstreamContext } from '../types';
 import { emptyUnitOutputs } from '../types';
 import { getPrice } from '@repo/design-library';
 
 const HST_THRESHOLD_KW = 50;
 
 const parameterSchema: ParameterField[] = [
-  { key: 'o2_demand_kg_per_day', label: 'O₂ demand', unit: 'kgO/d', min: 0, max: 20000, step: 10, defaultValue: 500 },
   { key: 'ote', label: 'Overall transfer efficiency', unit: '', min: 0.05, max: 0.15, step: 0.005, defaultValue: 0.08 },
   { key: 'diffuser_depth_m', label: 'Diffuser submergence', unit: 'm', min: 2, max: 8, step: 0.5, defaultValue: 4.5 },
+  { key: 'o2_demand_kg_per_day', label: 'O₂ demand (manual override)', unit: 'kgO/d', min: 0, max: 20000, step: 10, defaultValue: 0, description: 'Leave at 0 to auto-pull from the connected aerobic reactor.' },
 ];
 
 export const aerationBlowerDefinition: UnitDefinition = {
@@ -15,7 +15,9 @@ export const aerationBlowerDefinition: UnitDefinition = {
   label: 'Aeration Blower',
   description: 'Air blower supplying process air to diffusers — sized from O₂ demand',
   icon: 'fan',
-  handles: [],
+  handles: [
+    { id: 'aerobic_link', label: 'O₂ demand link', position: 'left', type: 'input' },
+  ],
   defaultParameters: Object.fromEntries(parameterSchema.map(p => [p.key, p.defaultValue])),
   parameterSchema,
 };
@@ -24,10 +26,16 @@ export class AerationBlower implements ProcessUnit {
   type = 'aeration_blower' as const;
   constructor(public parameters: Record<string, number>) {}
 
-  process(_inputs: WaterQuality[]): ProcessResult {
+  process(_inputs: WaterQuality[], upstreamContext?: UpstreamContext): ProcessResult {
     const p = this.parameters;
 
-    const o2 = Math.max(0, p.o2_demand_kg_per_day ?? 0);
+    const manualO2 = Math.max(0, p.o2_demand_kg_per_day ?? 0);
+    const upstreamMeta = upstreamContext?.nodeMetadata?.aerobic_link;
+    const upstreamO2_mgPerL = typeof upstreamMeta?.O2_demand_total === 'number' ? upstreamMeta.O2_demand_total : 0;
+    const upstreamFlow = typeof upstreamMeta?.flow_for_O2 === 'number' ? upstreamMeta.flow_for_O2 : 0;
+    const upstreamO2_kgPerD = (upstreamO2_mgPerL * upstreamFlow) / 1000;
+    const o2 = manualO2 > 0 ? manualO2 : upstreamO2_kgPerD;
+    const o2Source: 'manual' | 'upstream_aerobic' = manualO2 > 0 ? 'manual' : 'upstream_aerobic';
     const ote = Math.max(0.05, Math.min(0.15, p.ote ?? 0.08));
     const depth = p.diffuser_depth_m ?? 4.5;
 
@@ -111,7 +119,7 @@ export class AerationBlower implements ProcessUnit {
 
     return {
       outputs: {},
-      metadata: { installedKW, q_air },
+      metadata: { installedKW, q_air, o2_used_kg_per_day: o2, o2_source: o2Source },
       ...base,
     };
   }

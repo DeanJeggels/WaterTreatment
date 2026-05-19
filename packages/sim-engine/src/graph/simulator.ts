@@ -1,4 +1,4 @@
-import type { WaterQuality, SimulationResults, UnitType, ProcessResult } from '../types';
+import type { WaterQuality, SimulationResults, UnitType, ProcessResult, UpstreamContext } from '../types';
 import { emptyWaterQuality } from '../types';
 import { topologicalSort } from './topological-sort';
 import type { GraphNode, GraphEdge } from './topological-sort';
@@ -69,8 +69,17 @@ export function simulate(
         .map(e => edgeState.get(e.id))
         .filter((wq): wq is WaterQuality => wq !== undefined && wq.flow > 0);
 
+      // Build upstream context: each incoming edge's source-node metadata, keyed by the edge's targetHandle id
+      const upstreamContext: UpstreamContext = { nodeMetadata: {} };
+      for (const e of incomingEdges) {
+        const sourceResult = nodeResults.get(e.source);
+        if (sourceResult?.metadata) {
+          upstreamContext.nodeMetadata[e.targetHandle] = sourceResult.metadata;
+        }
+      }
+
       // Process
-      const result = unit.process(inputs);
+      const result = unit.process(inputs, upstreamContext);
       nodeResults.set(nodeId, result);
 
       // Distribute outputs to outgoing edges
