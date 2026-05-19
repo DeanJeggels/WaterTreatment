@@ -7,9 +7,9 @@ const MIXER_KW_PER_UNIT = 3;
 
 const parameterSchema: ParameterField[] = [
   { key: 'volume', label: 'Volume', unit: 'm³', min: 100, max: 50000, step: 100, defaultValue: 2000 },
-  { key: 'depth', label: 'Depth', unit: 'm', min: 3, max: 8, step: 0.5, defaultValue: 4.5 },
-  { key: 'denitrification_eff', label: 'Denitrification Efficiency', unit: '%', min: 0, max: 100, step: 5, defaultValue: 85 },
-  { key: 'cod_n_ratio', label: 'COD:N Ratio', unit: 'mgCOD/mgN', min: 3, max: 10, step: 0.5, defaultValue: 6 },
+  { key: 'depth', label: 'Depth', unit: 'm', min: 3, max: 8, step: 0.5, defaultValue: 4.5, advanced: true },
+  { key: 'denitrification_eff', label: 'Denitrification Efficiency', unit: '%', min: 0, max: 100, step: 5, defaultValue: 85, advanced: true },
+  { key: 'cod_n_ratio', label: 'COD:N Ratio', unit: 'mgCOD/mgN', min: 3, max: 10, step: 0.5, defaultValue: 6, advanced: true },
 ];
 
 export const bioreactorAnoxicDefinition: UnitDefinition = {

@@ -305,6 +305,11 @@ describe('BioreactorAnoxic', () => {
     const result = unit.process([typicalInfluent()]);
     assertValidV2Outputs(result);
   });
+
+  it('marks only volume as essential, rest advanced', () => {
+    const essential = bioreactorAnoxicDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
+    expect(essential).toEqual(['volume']);
+  });
 });
 
 describe('BioreactorAnoxic — Phase 1b', () => {
