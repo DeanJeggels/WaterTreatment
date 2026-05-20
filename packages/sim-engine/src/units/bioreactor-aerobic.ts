@@ -15,6 +15,7 @@ const parameterSchema: ParameterField[] = [
   { key: 'cod_removal_eff', label: 'Soluble COD Removal', unit: '%', min: 70, max: 99, step: 1, defaultValue: 90, advanced: true },
   { key: 'bod_removal_eff', label: 'BOD Removal', unit: '%', min: 80, max: 99, step: 1, defaultValue: 95, advanced: true },
   { key: 'kd', label: 'Decay Rate', unit: '1/d', min: 0.02, max: 0.15, step: 0.01, defaultValue: 0.06, advanced: true },
+  { key: 'ote', label: 'O₂ transfer efficiency (OTE)', unit: '', min: 0.05, max: 0.15, step: 0.005, defaultValue: 0.08, advanced: true },
 ];
 
 export const bioreactorAerobicDefinition: UnitDefinition = {
@@ -113,16 +114,29 @@ export class BioreactorAerobic implements ProcessUnit {
     const o2TotalKgPerD = ((Math.max(0, o2Carbonaceous) + o2Nitrification) * inf.flow) / 1000;
     const diffuserCount = Math.ceil(volume * DIFFUSER_PER_M3);
 
+    // Process-air blower sizing (folded in from the former standalone blower unit)
+    const ote = Math.max(0.05, Math.min(0.15, p.ote ?? 0.08));            // overall O2 transfer efficiency
+    const blowerDepth = p.depth ?? 4.5;                                    // diffuser submergence = tank depth
+    const q_air = (o2TotalKgPerD * 1000) / (0.21 * 1.421 * ote * 24 * 1000); // Am³/hr
+    const deltaP_kPa = blowerDepth * 9.81 + 15;
+    const deltaP_Pa = deltaP_kPa * 1000;
+    const blowerEta = 0.72;
+    const blowerKW = (q_air * deltaP_Pa) / (3600 * 1000 * blowerEta);
+    const blowerDailyKWh = blowerKW * 24;
+    const isHst = blowerKW > 50;
+
     const base = emptyUnitOutputs();
     base.sizing = {
       volume: { value: volume, unit: 'm3' },
       depth: { value: depth, unit: 'm' },
       HRT: { value: hrt * 24, unit: 'h' },
       MLSS: { value: mlss, unit: 'mg/L' },
+      airFlow: { value: q_air, unit: 'Am³/hr' },
+      blowerKW: { value: blowerKW, unit: 'kW' },
     };
     base.energy = {
-      installedKW: 0,
-      dailyKWh: 0,
+      installedKW: blowerKW,
+      dailyKWh: blowerDailyKWh,
       records: [
         {
           label: 'Total O2 demand',
@@ -136,10 +150,23 @@ export class BioreactorAerobic implements ProcessUnit {
           result: { value: o2TotalKgPerD, unit: 'kgO2/d' },
           citation: 'Ekama (1984) WRC TT-16/84, eq 4.23',
         },
+        {
+          label: 'Process air blower power',
+          symbol: 'P_blower',
+          equation: 'P = Q_air × ΔP / (η × 3600 × 1000)',
+          inputs: {
+            Q_air: { value: q_air, unit: 'Am³/hr', source: 'O2 demand / (0.21 × 1.421 × OTE × 24)' },
+            dP: { value: deltaP_kPa, unit: 'kPa', source: 'depth × 9.81 + 15' },
+            eta: { value: blowerEta, unit: '', source: '72% typical' },
+          },
+          result: { value: blowerKW, unit: 'kW' },
+          citation: 'WWTP Design.xlsm sheet 6 / ASCE 2-06',
+        },
       ],
     };
     const civilPrice = getPrice('civil_concrete_reinforced');
     const diffuserPrice = getPrice('fine_bubble_diffuser_edi_9in');
+    const blowerPrice = isHst ? getPrice('hst_turbo_blower') : getPrice('pd_blower_small');
     base.capex = {
       lineItems: [
         {
@@ -158,8 +185,16 @@ export class BioreactorAerobic implements ProcessUnit {
           unitPriceZar: diffuserPrice.unitPriceZar,
           sourceCitation: diffuserPrice.source,
         },
+        {
+          category: 'mechanical',
+          description: isHst ? 'HST turbo blower (process air, Sulzer/APG class)' : 'PD blower (process air, Aerzen/WEG class)',
+          quantity: 1,
+          unit: 'ea',
+          unitPriceZar: blowerPrice.unitPriceZar,
+          sourceCitation: blowerPrice.source,
+        },
       ],
-      total: volume * civilPrice.unitPriceZar + diffuserCount * diffuserPrice.unitPriceZar,
+      total: volume * civilPrice.unitPriceZar + diffuserCount * diffuserPrice.unitPriceZar + blowerPrice.unitPriceZar,
     };
     base.calculationRecords = [
       {
