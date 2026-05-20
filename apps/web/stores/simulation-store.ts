@@ -48,6 +48,7 @@ export const useSimulationStore = create<SimulationState>((set) => ({
         target: e.target,
         sourceHandle: e.sourceHandle ?? 'out',
         targetHandle: e.targetHandle ?? 'in',
+        recycleRatio: (e.data as { recycleRatio?: number } | undefined)?.recycleRatio,
       }));
 
       const results = simulate(simNodes, simEdges);

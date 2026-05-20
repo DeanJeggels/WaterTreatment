@@ -4,6 +4,7 @@ export interface GraphEdge {
   target: string;
   sourceHandle: string;
   targetHandle: string;
+  recycleRatio?: number; // present on recycle (back-)edges; defaults to 4 in the simulator if undefined
 }
 
 export interface GraphNode {

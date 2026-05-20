@@ -15,7 +15,6 @@ const parameterSchema: ParameterField[] = [
   { key: 'cod_removal_eff', label: 'Soluble COD Removal', unit: '%', min: 70, max: 99, step: 1, defaultValue: 90, advanced: true },
   { key: 'bod_removal_eff', label: 'BOD Removal', unit: '%', min: 80, max: 99, step: 1, defaultValue: 95, advanced: true },
   { key: 'kd', label: 'Decay Rate', unit: '1/d', min: 0.02, max: 0.15, step: 0.01, defaultValue: 0.06, advanced: true },
-  { key: 'imlr_ratio', label: 'IMLR Ratio (a)', unit: '× Q_raw', min: 0, max: 8, step: 0.5, defaultValue: 4, description: 'Internal mixed liquor recycle ratio relative to raw plant influent. 4× is typical for BNR. Set to 0 to disable.', advanced: true },
 ];
 
 export const bioreactorAerobicDefinition: UnitDefinition = {
@@ -26,7 +25,6 @@ export const bioreactorAerobicDefinition: UnitDefinition = {
   handles: [
     { id: 'in', label: 'Inflow', position: 'left', type: 'input' },
     { id: 'out', label: 'Outflow', position: 'right', type: 'output' },
-    { id: 'imlr', label: 'IMLR (recycle)', position: 'top', type: 'output' },
   ],
   defaultParameters: Object.fromEntries(parameterSchema.map(p => [p.key, p.defaultValue])),
   parameterSchema,
@@ -94,16 +92,8 @@ export class BioreactorAerobic implements ProcessUnit {
     const pAssimilated = biomassProduced * 0.02; // ~2% P content in biomass
     const tpOut = Math.max(0, inf.TP - pAssimilated);
 
-    const imlrRatio = p.imlr_ratio ?? 4;
-    // IMLR ratio is defined relative to RAW influent, not the mixed reactor inlet.
-    // Q_IMLR = a × Q_raw = (a / (1 + a)) × Q_mixed
-    const imlrFlow = (inf.flow * imlrRatio) / (1 + imlrRatio);
-    // Mass balance at the aerobic outlet: Q_mixed = Q_main_out + Q_IMLR.
-    // Main outflow carries the raw-influent equivalent forward; IMLR carries the recycle back.
-    const mainOutFlow = inf.flow - imlrFlow;
-
     const output: WaterQuality = {
-      flow: mainOutFlow,
+      flow: inf.flow,
       COD: Math.max(0, totalCOD_out),
       sCOD: Math.max(0, sCOD_eff),
       BOD5: Math.max(0, bod5Out),
@@ -118,8 +108,6 @@ export class BioreactorAerobic implements ProcessUnit {
       DO: doSetpoint,
       temperature: inf.temperature,
     };
-
-    const imlr: WaterQuality = { ...output, flow: imlrFlow };
 
     const depth = p.depth ?? 4.5;
     const o2TotalKgPerD = ((Math.max(0, o2Carbonaceous) + o2Nitrification) * inf.flow) / 1000;
@@ -219,23 +207,12 @@ export class BioreactorAerobic implements ProcessUnit {
         result: { value: o2Nitrification, unit: 'mgO/L' },
         citation: 'Ekama (1984) WRC TT-16/84, eq 4.21',
       },
-      {
-        label: 'Internal mixed liquor recycle',
-        symbol: 'Q_IMLR',
-        equation: 'Q_IMLR = a × Q_raw = (a / (1 + a)) × Q_mixed',
-        inputs: {
-          a: { value: imlrRatio, unit: '× Q_raw', source: 'user input (imlr_ratio)' },
-          Q_mixed: { value: inf.flow, unit: 'm3/d', source: 'mixed reactor inlet (raw + recycle)' },
-        },
-        result: { value: imlrFlow, unit: 'm3/d' },
-        citation: 'Metcalf & Eddy (2014) Ch. 8 — a = Q_IMLR/Q_raw; typical 2-6× for BNR',
-      },
     ];
     if (mlss > 6000) base.warnings.push(`MLSS = ${mlss.toFixed(0)} mg/L > 6000. Consider MBR or more volume.`);
     if (mlss < 2000) base.warnings.push(`MLSS = ${mlss.toFixed(0)} mg/L < 2000. Reactor may be underloaded.`);
 
     return {
-      outputs: { out: output, imlr },
+      outputs: { out: output },
       metadata: {
         HRT_hours: hrt * 24,
         SRT_days: srt,
@@ -246,8 +223,6 @@ export class BioreactorAerobic implements ProcessUnit {
         O2_demand_total: Math.max(0, o2Carbonaceous) + o2Nitrification,
         biomass_produced: biomassProduced,
         NH3_oxidized: nh3Oxidized,
-        IMLR_ratio: imlrRatio,
-        IMLR_flow: imlrFlow,
         flow_for_O2: inf.flow,
       },
       ...base,
