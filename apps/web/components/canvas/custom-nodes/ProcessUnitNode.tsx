@@ -6,6 +6,7 @@ import {
   Droplets, Cylinder, Wind, Moon, FlaskConical, Triangle,
   GitBranch, Merge, Funnel, Waves,
   Filter, Circle, Square, Layers, Fan, Droplet, Beaker, Sun, ArrowUp,
+  Trash2,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -13,7 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { FlowsheetNodeData } from '@/stores/flowsheet-store';
+import { useFlowsheetStore, type FlowsheetNodeData } from '@/stores/flowsheet-store';
 import type { UnitType, WaterQuality } from '@repo/sim-engine';
 import { unitDefinitions } from '@repo/sim-engine';
 import { useSimulationStore } from '@/stores/simulation-store';
@@ -81,10 +82,24 @@ function ProcessUnitNode({ id, data, selected }: { id: string; data: FlowsheetNo
   const nodeContent = (
     <div
       className={`
-        relative flex flex-col items-center gap-1 rounded-lg border-2 bg-card p-3 min-w-[100px]
+        group relative flex flex-col items-center gap-1 rounded-lg border-2 bg-card p-3 min-w-[100px]
         transition-colors ${borderColor}
       `}
     >
+      {/* Delete button — revealed on hover */}
+      <button
+        type="button"
+        aria-label="Delete unit"
+        title="Delete unit"
+        onClick={(e) => {
+          e.stopPropagation();
+          useFlowsheetStore.getState().deleteNode(id);
+        }}
+        className="nodrag absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-card text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+      >
+        <Trash2 className="h-3 w-3" />
+      </button>
+
       {/* Input handles */}
       {inputHandles.map((h, i) => (
         <Handle
