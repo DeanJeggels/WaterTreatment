@@ -236,6 +236,25 @@ describe('BioreactorAerobic', () => {
     const essential = bioreactorAerobicDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
     expect(essential).toEqual(['volume', 'srt']);
   });
+
+  it('folds in process-air blower sizing from O2 demand', () => {
+    const unit = new BioreactorAerobic({
+      volume: 5000, srt: 12, do_setpoint: 2, yield_obs: 0.45,
+      nitrification_eff: 95, cod_removal_eff: 90, bod_removal_eff: 95,
+      kd: 0.06, depth: 4.5, ote: 0.08,
+    });
+    const inf = { ...emptyWaterQuality(), flow: 5000, COD: 500, sCOD: 200, BOD5: 250, TKN: 40, NH3N: 25, TSS: 250, VSS: 200, temperature: 20, pH: 7.2, alkalinity: 5 };
+    const r = unit.process([inf]);
+    // Blower power surfaced in energy
+    expect(r.energy!.installedKW).toBeGreaterThan(0);
+    expect(r.energy!.dailyKWh).toBeGreaterThan(0);
+    // Air flow in sizing
+    expect(r.sizing!.airFlow!.value).toBeGreaterThan(0);
+    expect(r.sizing!.blowerKW!.value).toBeGreaterThan(0);
+    // Capex includes a blower line item
+    const hasBlower = r.capex!.lineItems.some(li => /blower/i.test(li.description));
+    expect(hasBlower).toBe(true);
+  });
 });
 
 describe('BioreactorAerobic — Phase 1b', () => {
@@ -263,7 +282,8 @@ describe('BioreactorAerobic — Phase 1b', () => {
     expect(diffusers!.quantity).toBeGreaterThan(0);
     expect(result.capex!.total).toBeGreaterThan(0);
 
-    expect(result.energy?.installedKW).toBe(0);
+    // Process-air blower is now folded into the aerobic reactor, so installed power is non-zero
+    expect(result.energy?.installedKW).toBeGreaterThan(0);
 
     assertAllRecordsValid(result.calculationRecords);
   });
