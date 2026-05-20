@@ -168,6 +168,14 @@ export const useFlowsheetStore = create<FlowsheetState>((set, get) => ({
 
   selectNode: (id) => set({ selectedNodeId: id, selectedEdgeId: null }),
   selectEdge: (id) => set({ selectedEdgeId: id, selectedNodeId: null }),
-  setNodes: (nodes) => set({ nodes }),
+  setNodes: (nodes) => {
+    // Re-seed the id counter past any loaded node ids so newly added/spliced units
+    // never collide with persisted ones (a collision silently drops a React Flow edge).
+    for (const n of nodes) {
+      const suffix = Number(n.id.split('-').pop());
+      if (Number.isFinite(suffix) && suffix > nodeIdCounter) nodeIdCounter = suffix;
+    }
+    set({ nodes });
+  },
   setEdges: (edges) => set({ edges }),
 }));
