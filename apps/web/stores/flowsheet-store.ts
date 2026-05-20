@@ -35,6 +35,8 @@ interface FlowsheetState {
   addNode: (type: UnitType, position: { x: number; y: number }) => void;
   updateNodeData: (id: string, data: Partial<FlowsheetNodeData>) => void;
   updateEdgeData: (id: string, data: Record<string, unknown>) => void;
+  deleteNode: (id: string) => void;
+  deleteEdge: (id: string) => void;
   selectNode: (id: string | null) => void;
   selectEdge: (id: string | null) => void;
   setNodes: (nodes: FlowsheetNode[]) => void;
@@ -103,6 +105,23 @@ export const useFlowsheetStore = create<FlowsheetState>((set, get) => ({
       edges: get().edges.map((e) =>
         e.id === id ? { ...e, data: { ...(e.data ?? {}), ...data } } : e
       ),
+    });
+    getProjectStore().then(m => m.useProjectStore.getState().markDirty());
+  },
+
+  deleteNode: (id) => {
+    set({
+      nodes: get().nodes.filter((n) => n.id !== id),
+      edges: get().edges.filter((e) => e.source !== id && e.target !== id),
+      selectedNodeId: get().selectedNodeId === id ? null : get().selectedNodeId,
+    });
+    getProjectStore().then(m => m.useProjectStore.getState().markDirty());
+  },
+
+  deleteEdge: (id) => {
+    set({
+      edges: get().edges.filter((e) => e.id !== id),
+      selectedEdgeId: get().selectedEdgeId === id ? null : get().selectedEdgeId,
     });
     getProjectStore().then(m => m.useProjectStore.getState().markDirty());
   },
