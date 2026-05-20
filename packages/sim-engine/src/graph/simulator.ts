@@ -22,6 +22,29 @@ export function simulate(
 ): SimulationResults {
   const { sorted, recycleEdges } = topologicalSort(nodes, edges);
 
+  // O(1) lookup for recycle (back-)edges
+  const recycleEdgeIds = new Set<string>(recycleEdges.map(e => e.id));
+
+  // Q_basis = total plant raw influent = sum of every influent node's declared flow.
+  // Reading the node param `flow` is order-independent and pins the recycle flow across
+  // iterations (recycle flow = ratio × Q_basis), which guarantees convergence.
+  const Q_basis = nodes.reduce((sum, n) => {
+    const nd = n.data as unknown as NodeData;
+    if (nd.unitType === 'influent') {
+      return sum + (nd.parameters?.flow ?? 0);
+    }
+    return sum;
+  }, 0);
+
+  // Plant-level warnings. A recycle line with zero influent silently carries no
+  // flow (recycle flow = ratio × Q_basis = 0), so flag it once up front.
+  const warnings: string[] = [];
+  if (recycleEdges.length > 0 && Q_basis <= 0) {
+    warnings.push(
+      'Recycle line(s) present but plant influent flow is 0 — recycle streams carry no flow. Set the influent flow.'
+    );
+  }
+
   // Edge state: water quality on each edge
   const edgeState = new Map<string, WaterQuality>();
   for (const edge of edges) {
@@ -82,13 +105,32 @@ export function simulate(
       const result = unit.process(inputs, upstreamContext);
       nodeResults.set(nodeId, result);
 
-      // Distribute outputs to outgoing edges
+      // Distribute outputs to outgoing edges, grouped by source handle.
+      // Recycle edges carry ratio × Q_basis (fixed flow, source concentrations).
+      // Forward edges from the same handle are tapped: flow = sourceOut.flow − Σ recycle flows.
       const outgoingEdges = edges.filter(e => e.source === nodeId);
-      for (const outEdge of outgoingEdges) {
-        const outputKey = outEdge.sourceHandle;
-        const outputWQ = result.outputs[outputKey];
-        if (outputWQ) {
-          edgeState.set(outEdge.id, outputWQ);
+      const handles = new Set(outgoingEdges.map(e => e.sourceHandle));
+      for (const handle of handles) {
+        const outputWQ = result.outputs[handle];
+        if (!outputWQ) continue;
+
+        const handleEdges = outgoingEdges.filter(e => e.sourceHandle === handle);
+        const recycleOut = handleEdges.filter(e => recycleEdgeIds.has(e.id));
+        const forwardOut = handleEdges.filter(e => !recycleEdgeIds.has(e.id));
+
+        let totalRecycleFlow = 0;
+        for (const re of recycleOut) {
+          const recycleFlow = (re.recycleRatio ?? 4) * Q_basis;
+          totalRecycleFlow += recycleFlow;
+          edgeState.set(re.id, { ...outputWQ, flow: recycleFlow });
+        }
+
+        for (const fe of forwardOut) {
+          edgeState.set(fe.id, { ...outputWQ, flow: Math.max(0, outputWQ.flow - totalRecycleFlow) });
+        }
+
+        if (totalRecycleFlow > outputWQ.flow + 1e-6) {
+          (result.warnings ??= []).push(`Recycle ratio exceeds available flow at handle ${handle}`);
         }
       }
     }
@@ -164,5 +206,6 @@ export function simulate(
     converged,
     iterations: iteration,
     massBalanceError,
+    warnings,
   };
 }

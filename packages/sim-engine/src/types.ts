@@ -151,6 +151,8 @@ export interface SimulationResults {
   converged: boolean;
   iterations: number;
   massBalanceError: number;
+  /** Plant-level warnings raised during the run (e.g. recycle present but zero influent). */
+  warnings?: string[];
 }
 
 /** Create a default/empty water quality vector */
