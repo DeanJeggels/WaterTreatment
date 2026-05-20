@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { simulate } from '../src/graph/simulator';
+import { detectRecycleEdges } from '../src/index';
 import { checkCompliance } from '../src/units/index';
 import type { GraphNode, GraphEdge } from '../src/graph/topological-sort';
 import type { WaterQuality, DischargeStandards, ProcessResult } from '../src/types';
@@ -457,5 +458,37 @@ describe('Simulator: BNR-MBR with edge-based recycle', () => {
     ];
     const r = simulate(nodes, edges);
     expect(r.warnings).toContain('Recycle line(s) present but plant influent flow is 0 — recycle streams carry no flow. Set the influent flow.');
+  });
+
+  it('handles two recycle lines at once (IMLR 4× + RAS 0.75× into anoxic)', () => {
+    const nodes: GraphNode[] = [
+      { id: 'inf', type: 'influent', data: { unitType: 'influent', parameters: { flow: 1000, COD: 500, sCOD: 200, BOD5: 250, TKN: 40, NH3N: 25, NO3N: 0.5, TP: 8, TSS: 250, VSS: 200, pH: 7.2, alkalinity: 5, DO: 0, temperature: 20 } } },
+      { id: 'anx', type: 'bioreactor_anoxic', data: { unitType: 'bioreactor_anoxic', parameters: { volume: 1500, depth: 4.5, denitrification_eff: 85, cod_n_ratio: 6 } } },
+      { id: 'aer', type: 'bioreactor_aerobic', data: { unitType: 'bioreactor_aerobic', parameters: { volume: 5000, srt: 12, do_setpoint: 2, yield_obs: 0.45, nitrification_eff: 95, cod_removal_eff: 90, bod_removal_eff: 95, kd: 0.06, depth: 4.5 } } },
+      { id: 'sc', type: 'secondary_clarifier', data: { unitType: 'secondary_clarifier', parameters: { surface_area: 800, depth: 4.0, tss_removal: 99.5, uo_ratio: 0.75 } } },
+      { id: 'eff', type: 'effluent', data: { unitType: 'effluent', parameters: {} } },
+    ];
+    const edges: GraphEdge[] = [
+      { id: 'e1', source: 'inf', target: 'anx', sourceHandle: 'out', targetHandle: 'in' },
+      { id: 'e2', source: 'anx', target: 'aer', sourceHandle: 'out', targetHandle: 'in' },
+      { id: 'e3', source: 'aer', target: 'sc', sourceHandle: 'out', targetHandle: 'in' },
+      { id: 'e4', source: 'sc', target: 'eff', sourceHandle: 'overflow', targetHandle: 'in' },
+      // IMLR from aerobic outlet at 4× influent
+      { id: 'imlr', source: 'aer', target: 'anx', sourceHandle: 'out', targetHandle: 'in', recycleRatio: 4 },
+      // RAS from clarifier underflow at 0.75× influent
+      { id: 'ras', source: 'sc', target: 'anx', sourceHandle: 'underflow', targetHandle: 'in', recycleRatio: 0.75 },
+    ];
+
+    // Both back-edges are detected as recycles
+    const recycleIds = detectRecycleEdges(nodes, edges).map((e) => e.id);
+    expect(recycleIds).toContain('imlr');
+    expect(recycleIds).toContain('ras');
+
+    const r = simulate(nodes, edges);
+    expect(r.converged).toBe(true);
+    expect(r.iterations).toBeLessThan(50);
+    // Each recycle carries ratio × raw influent (1000), independent of the other
+    expect(r.edgeResults['imlr'].flow).toBeCloseTo(4000, 0);
+    expect(r.edgeResults['ras'].flow).toBeCloseTo(750, 0);
   });
 });
