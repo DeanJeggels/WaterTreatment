@@ -82,12 +82,18 @@ const UNIT_CATEGORY: Record<UnitType, Category> = {
   aeration_blower: 'utility',
 };
 
+// Units kept in the engine for backward compatibility but no longer offered in the palette.
+// aeration_blower: process-air sizing now folds into the aerobic reactor (MBR keeps its own scour blower).
+// inlet_pumping: dropped per design review.
+const PALETTE_HIDDEN: Set<UnitType> = new Set<UnitType>(['aeration_blower', 'inlet_pumping']);
+
 function groupUnits(): Record<Category, UnitType[]> {
   const groups: Record<Category, UnitType[]> = {
     flow: [], preliminary: [], primary: [], biological: [],
     tertiary: [], sludge: [], utility: [],
   };
   for (const type of Object.keys(unitDefinitions) as UnitType[]) {
+    if (PALETTE_HIDDEN.has(type)) continue;
     groups[UNIT_CATEGORY[type]].push(type);
   }
   return groups;
