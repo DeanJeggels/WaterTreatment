@@ -103,6 +103,8 @@ export default function Canvas() {
         };
         let nearest: { id: string; dist: number } | null = null;
         for (const e of edges) {
+          // Dosing / UV belong on a forward process stream, never inside a recycle loop.
+          if (recycleIds.has(e.id)) continue;
           const a = centerOf(e.source);
           const b = centerOf(e.target);
           if (!a || !b) continue;
@@ -117,7 +119,7 @@ export default function Canvas() {
 
       addNode(unitType, position);
     },
-    [addNode, spliceNodeOntoEdge, edges, reactFlowInstance]
+    [addNode, spliceNodeOntoEdge, edges, recycleIds, reactFlowInstance]
   );
 
   const onNodeClick = useCallback(
