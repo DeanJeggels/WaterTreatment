@@ -93,7 +93,8 @@ export default function Canvas() {
 
   const onPaneClick = useCallback(() => {
     selectNode(null);
-  }, [selectNode]);
+    selectEdge(null);
+  }, [selectNode, selectEdge]);
 
   return (
     <div className="flex-1 h-full">
