@@ -443,4 +443,19 @@ describe('Simulator: BNR-MBR with edge-based recycle', () => {
     expect(r.nodeResults['eff'].outputs.out!.flow).toBeGreaterThan(900);
     expect(r.nodeResults['eff'].outputs.out!.flow).toBeLessThan(1010);
   });
+
+  it('warns when a recycle line exists but influent flow is 0', () => {
+    const nodes: GraphNode[] = [
+      { id: 'inf', type: 'influent', data: { unitType: 'influent', parameters: { flow: 0, COD: 500, sCOD: 200, BOD5: 250, TKN: 40, NH3N: 25, NO3N: 0.5, TP: 8, TSS: 250, VSS: 200, pH: 7.2, alkalinity: 5, DO: 0, temperature: 20 } } },
+      { id: 'anx', type: 'bioreactor_anoxic', data: { unitType: 'bioreactor_anoxic', parameters: { volume: 1500, depth: 4.5, denitrification_eff: 85, cod_n_ratio: 6 } } },
+      { id: 'aer', type: 'bioreactor_aerobic', data: { unitType: 'bioreactor_aerobic', parameters: { volume: 5000, srt: 12, do_setpoint: 2, yield_obs: 0.45, nitrification_eff: 95, cod_removal_eff: 90, bod_removal_eff: 95, kd: 0.06, depth: 4.5 } } },
+    ];
+    const edges: GraphEdge[] = [
+      { id: 'e1', source: 'inf', target: 'anx', sourceHandle: 'out', targetHandle: 'in' },
+      { id: 'e2', source: 'anx', target: 'aer', sourceHandle: 'out', targetHandle: 'in' },
+      { id: 'e3', source: 'aer', target: 'anx', sourceHandle: 'out', targetHandle: 'in', recycleRatio: 4 },
+    ];
+    const r = simulate(nodes, edges);
+    expect(r.warnings).toContain('Recycle line(s) present but plant influent flow is 0 — recycle streams carry no flow. Set the influent flow.');
+  });
 });

@@ -36,6 +36,15 @@ export function simulate(
     return sum;
   }, 0);
 
+  // Plant-level warnings. A recycle line with zero influent silently carries no
+  // flow (recycle flow = ratio × Q_basis = 0), so flag it once up front.
+  const warnings: string[] = [];
+  if (recycleEdges.length > 0 && Q_basis <= 0) {
+    warnings.push(
+      'Recycle line(s) present but plant influent flow is 0 — recycle streams carry no flow. Set the influent flow.'
+    );
+  }
+
   // Edge state: water quality on each edge
   const edgeState = new Map<string, WaterQuality>();
   for (const edge of edges) {
@@ -197,5 +206,6 @@ export function simulate(
     converged,
     iterations: iteration,
     massBalanceError,
+    warnings,
   };
 }
