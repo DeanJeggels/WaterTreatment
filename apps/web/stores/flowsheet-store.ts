@@ -33,6 +33,7 @@ interface FlowsheetState {
   onConnect: OnConnect;
 
   addNode: (type: UnitType, position: { x: number; y: number }) => void;
+  spliceNodeOntoEdge: (type: UnitType, position: { x: number; y: number }, edgeId: string) => void;
   updateNodeData: (id: string, data: Partial<FlowsheetNodeData>) => void;
   updateEdgeData: (id: string, data: Record<string, unknown>) => void;
   deleteNode: (id: string) => void;
@@ -88,6 +89,45 @@ export const useFlowsheetStore = create<FlowsheetState>((set, get) => ({
       },
     };
     set({ nodes: [...get().nodes, newNode] });
+    getProjectStore().then(m => m.useProjectStore.getState().markDirty());
+  },
+
+  spliceNodeOntoEdge: (type, position, edgeId) => {
+    const edge = get().edges.find((e) => e.id === edgeId);
+    if (!edge) {
+      get().addNode(type, position);
+      return;
+    }
+    const def = unitDefinitions[type];
+    const id = `${type}-${++nodeIdCounter}`;
+    const newNode: FlowsheetNode = {
+      id,
+      type: 'processUnit',
+      position,
+      data: {
+        unitType: type,
+        label: def.label,
+        parameters: { ...def.defaultParameters },
+      },
+    };
+    const e1: FlowsheetEdge = {
+      id: `${edge.source}-${id}`,
+      source: edge.source,
+      target: id,
+      sourceHandle: edge.sourceHandle ?? null,
+      targetHandle: 'in',
+    };
+    const e2: FlowsheetEdge = {
+      id: `${id}-${edge.target}`,
+      source: id,
+      target: edge.target,
+      sourceHandle: 'out',
+      targetHandle: edge.targetHandle ?? null,
+    };
+    set({
+      nodes: [...get().nodes, newNode],
+      edges: [...get().edges.filter((e) => e.id !== edgeId), e1, e2],
+    });
     getProjectStore().then(m => m.useProjectStore.getState().markDirty());
   },
 
