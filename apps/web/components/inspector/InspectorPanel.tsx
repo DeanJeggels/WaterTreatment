@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useFlowsheetStore } from '@/stores/flowsheet-store';
 import { useSimulationStore } from '@/stores/simulation-store';
+import { getRecycleEdgeIds } from '@/lib/recycle';
 import { unitDefinitions } from '@repo/sim-engine';
 import type { ParameterField, WaterQuality } from '@repo/sim-engine';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/layout/empty-state';
 import { HelpTooltip } from '@/components/help-tooltip';
-import { MousePointer2 } from 'lucide-react';
+import { MousePointer2, Trash2 } from 'lucide-react';
 
 import { WaterQualityTable } from './WaterQualityTable';
 import { InspectorSection } from './InspectorSection';
@@ -24,7 +26,16 @@ import { BoqSection } from './BoqSection';
 import { DesignSummarySection } from './DesignSummarySection';
 
 export default function InspectorPanel() {
-  const { nodes, selectedNodeId, updateNodeData } = useFlowsheetStore();
+  const {
+    nodes,
+    edges,
+    selectedNodeId,
+    selectedEdgeId,
+    updateNodeData,
+    updateEdgeData,
+    deleteNode,
+    deleteEdge,
+  } = useFlowsheetStore();
   const { results } = useSimulationStore();
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -36,7 +47,77 @@ export default function InspectorPanel() {
     ? nodes.find((n) => n.id === selectedNodeId)
     : null;
 
+  const recycleIds = useMemo(() => getRecycleEdgeIds(nodes, edges), [nodes, edges]);
+
   if (!selectedNode) {
+    // Edge selected (and no node) — show the recycle ratio editor.
+    if (selectedEdgeId) {
+      const selectedEdge = edges.find((e) => e.id === selectedEdgeId);
+      const isRecycle = selectedEdge ? recycleIds.has(selectedEdge.id) : false;
+      const ratio =
+        (selectedEdge?.data as { recycleRatio?: number } | undefined)?.recycleRatio ?? 4;
+
+      return (
+        <div className="w-80 border-l border-border bg-card/30 overflow-y-auto">
+          <div className="p-4 space-y-4">
+            <DesignSummarySection results={results} nodes={nodes} />
+
+            <Separator />
+
+            {isRecycle ? (
+              <InspectorSection title="Recycle line">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="recycleRatio" className="text-xs">
+                      Recycle ratio
+                      <span className="text-muted-foreground ml-1">(× influent)</span>
+                    </Label>
+                    <Input
+                      id="recycleRatio"
+                      type="number"
+                      min={0}
+                      max={10}
+                      step={0.5}
+                      value={ratio}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val)) {
+                          updateEdgeData(selectedEdgeId, { recycleRatio: val });
+                        }
+                      }}
+                      className="h-8 text-sm font-mono"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Flow returned upstream = ratio × plant influent flow.
+                  </p>
+                </div>
+              </InspectorSection>
+            ) : (
+              <InspectorSection title="Stream">
+                <p className="text-xs text-muted-foreground">
+                  This line is a forward stream. Only lines that loop back upstream carry a
+                  recycle ratio.
+                </p>
+              </InspectorSection>
+            )}
+
+            <Separator />
+
+            <Button
+              variant="destructive"
+              size="xs"
+              onClick={() => deleteEdge(selectedEdgeId)}
+              className="w-full"
+            >
+              <Trash2 />
+              Delete line
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="w-80 border-l border-border bg-card/30 overflow-y-auto">
         <div className="p-4 space-y-4">
@@ -98,9 +179,21 @@ export default function InspectorPanel() {
     <div className="w-80 border-l border-border bg-card/30 overflow-y-auto">
       <div className="p-4 space-y-4">
         {/* Header */}
-        <div>
-          <h3 className="text-base font-semibold text-foreground">{selectedNode.data.label}</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">{def.description}</p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-foreground">{selectedNode.data.label}</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">{def.description}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => deleteNode(selectedNode.id)}
+            title="Delete unit"
+            aria-label="Delete unit"
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 />
+          </Button>
         </div>
 
         <Separator />
