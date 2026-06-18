@@ -57,10 +57,49 @@ export async function runAndPersistDesign(
       targetHandle: e.targetHandle,
     })),
   };
-  // Non-fatal: the package is already saved; canvas seeding is a convenience.
-  await supabase.from('flowsheets').update({ graph_data: graphData }).eq('id', flowsheetId);
+  // Carry project-level meta (client, location) to the shared proposal_data so
+  // it shows on the Proposal tab too. Merge to preserve other proposal fields.
+  const { data: fsRow } = await supabase
+    .from('flowsheets')
+    .select('proposal_data')
+    .eq('id', flowsheetId)
+    .maybeSingle();
+  const existingProposal = (fsRow?.proposal_data ?? {}) as Record<string, unknown>;
+  const existingClient = (existingProposal.client ?? {}) as Record<string, unknown>;
+  const mergedProposal = {
+    ...existingProposal,
+    client: {
+      ...existingClient,
+      ...(inputs.meta.client ? { name: inputs.meta.client } : {}),
+      ...(inputs.meta.siteLocation ? { location: inputs.meta.siteLocation } : {}),
+    },
+  };
+
+  // Non-fatal: the package is already saved; canvas + proposal seeding is convenience.
+  await supabase
+    .from('flowsheets')
+    .update({ graph_data: graphData, proposal_data: mergedProposal })
+    .eq('id', flowsheetId);
+  // Keep the project name in sync so the Flowsheet/Proposal headers match.
+  if (inputs.meta.projectName) {
+    await supabase.from('projects').update({ name: inputs.meta.projectName }).eq('id', projectId);
+  }
 
   return pkg;
+}
+
+/** Shared project meta for pre-filling the wizard (client/location live on proposal_data). */
+export async function loadProjectMeta(
+  flowsheetId: string,
+): Promise<{ client?: string; siteLocation?: string }> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from('flowsheets')
+    .select('proposal_data')
+    .eq('id', flowsheetId)
+    .maybeSingle();
+  const client = (data?.proposal_data as { client?: { name?: string; location?: string } } | null)?.client;
+  return { client: client?.name, siteLocation: client?.location };
 }
 
 /** Load the persisted package for a flowsheet (viewer reads the PERSISTED row, not live state). */
