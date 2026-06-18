@@ -37,6 +37,9 @@ export type { DerivedGeometry } from './dimension-deriver';
 export { allocateTag, processAreaFor } from './tags';
 export { materialFor } from './materials';
 
+export { instantiateObjects } from './materialise';
+export type { MaterialiserNode, MaterialiserEdge, MaterialiseOptions } from './materialise';
+
 export type {
   Point2D,
   Corridor,
