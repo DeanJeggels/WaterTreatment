@@ -1,0 +1,1799 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string"
+        },
+        "flowsheetId": {
+          "type": "string"
+        },
+        "projectName": {
+          "type": "string"
+        },
+        "client": {
+          "type": "string"
+        },
+        "siteLocation": {
+          "type": "string"
+        },
+        "plantType": {
+          "type": "string"
+        },
+        "generatedAt": {
+          "type": "string"
+        },
+        "engine": {
+          "type": "object",
+          "properties": {
+            "simEngine": {
+              "type": "string"
+            },
+            "layout": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "simEngine",
+            "layout"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "projectId",
+        "flowsheetId",
+        "projectName",
+        "plantType",
+        "generatedAt",
+        "engine"
+      ],
+      "additionalProperties": false
+    },
+    "coordinateSystem": {
+      "type": "object",
+      "properties": {
+        "convention": {
+          "type": "string",
+          "const": "right-handed-z-up"
+        },
+        "linearUnit": {
+          "type": "string",
+          "const": "m"
+        },
+        "angleUnit": {
+          "type": "string",
+          "const": "deg"
+        },
+        "origin": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "crs": {
+              "type": "string"
+            },
+            "eastingM": {
+              "type": "number"
+            },
+            "northingM": {
+              "type": "number"
+            },
+            "groundLevelMamsl": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "description"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "convention",
+        "linearUnit",
+        "angleUnit",
+        "origin"
+      ],
+      "additionalProperties": false
+    },
+    "inputs": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "basis": {
+      "type": "object",
+      "properties": {
+        "dischargeStandard": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "influentBasis": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "designFlows": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      },
+      "required": [
+        "dischargeStandard",
+        "influentBasis",
+        "designFlows"
+      ],
+      "additionalProperties": false
+    },
+    "graph": {
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "unitType": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "position": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "id",
+              "unitType"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string"
+              },
+              "sourceHandle": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "targetHandle": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "source",
+              "target"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "nodes",
+        "edges"
+      ],
+      "additionalProperties": false
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "string",
+            "const": "1.0.0"
+          },
+          "id": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "class": {
+            "type": "string",
+            "enum": [
+              "tank",
+              "reactor",
+              "clarifier",
+              "membrane",
+              "pump",
+              "blower",
+              "screen",
+              "mixer",
+              "dosing_skid",
+              "thickener",
+              "dewatering",
+              "disinfection",
+              "building",
+              "electrical_room",
+              "access_zone",
+              "equipment"
+            ]
+          },
+          "discipline": {
+            "type": "string",
+            "enum": [
+              "process",
+              "mechanical",
+              "civil",
+              "electrical",
+              "instrumentation",
+              "access",
+              "piping"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "geometry": {
+            "type": "object",
+            "properties": {
+              "shape": {
+                "type": "string",
+                "enum": [
+                  "rectangle",
+                  "circle",
+                  "polygon"
+                ]
+              },
+              "footprint": {
+                "type": "object",
+                "properties": {
+                  "lengthM": {
+                    "type": "number"
+                  },
+                  "widthM": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "lengthM",
+                  "widthM"
+                ],
+                "additionalProperties": false
+              },
+              "diameterM": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number"
+                  },
+                  "unit": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit"
+                ],
+                "additionalProperties": false
+              },
+              "heightM": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number"
+                  },
+                  "unit": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit"
+                ],
+                "additionalProperties": false
+              },
+              "freeboardM": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number"
+                  },
+                  "unit": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit"
+                ],
+                "additionalProperties": false
+              },
+              "capacity": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number"
+                  },
+                  "unit": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit"
+                ],
+                "additionalProperties": false
+              },
+              "vertices": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "shape",
+              "footprint"
+            ],
+            "additionalProperties": false
+          },
+          "placement": {
+            "type": "object",
+            "properties": {
+              "location": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "additionalProperties": false
+              },
+              "rotationDeg": {
+                "type": "number"
+              },
+              "zone": {
+                "type": "string",
+                "enum": [
+                  "process",
+                  "sludge",
+                  "chemical",
+                  "electrical",
+                  "blower",
+                  "headworks"
+                ]
+              }
+            },
+            "required": [
+              "location",
+              "rotationDeg"
+            ],
+            "additionalProperties": false
+          },
+          "material": {
+            "type": "object",
+            "properties": {
+              "primary": {
+                "type": "string"
+              },
+              "grade": {
+                "type": "string"
+              },
+              "coating": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "primary"
+            ],
+            "additionalProperties": false
+          },
+          "capacity": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value",
+                "unit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "params": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "tank"
+                  },
+                  "function": {
+                    "type": "string",
+                    "enum": [
+                      "equalisation",
+                      "anoxic",
+                      "aeration",
+                      "anaerobic",
+                      "clarifier",
+                      "mbr",
+                      "sludge-holding",
+                      "buffer",
+                      "contact"
+                    ]
+                  },
+                  "volumeM3": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "sideWaterDepthM": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "freeboardM": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "invertLevelM": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "topWaterLevelM": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "hydraulicRetentionTimeH": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "mlssMgL": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "diffuserCount": {
+                    "type": "number"
+                  },
+                  "surfaceLoadingRateM3M2H": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "bunded": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "function",
+                  "volumeM3",
+                  "sideWaterDepthM"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "pump"
+                  },
+                  "service": {
+                    "type": "string",
+                    "enum": [
+                      "inlet",
+                      "RAS",
+                      "WAS",
+                      "transfer",
+                      "sludge",
+                      "permeate",
+                      "dosing"
+                    ]
+                  },
+                  "pumpType": {
+                    "type": "string",
+                    "enum": [
+                      "centrifugal",
+                      "submersible",
+                      "progressive-cavity",
+                      "diaphragm",
+                      "screw"
+                    ]
+                  },
+                  "dutyFlowM3H": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "headM": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "installedKW": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "configuration": {
+                    "type": "string"
+                  },
+                  "standbyCount": {
+                    "type": "number"
+                  },
+                  "vfd": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "service",
+                  "pumpType",
+                  "dutyFlowM3H",
+                  "headM",
+                  "installedKW",
+                  "configuration"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "blower"
+                  },
+                  "blowerType": {
+                    "type": "string",
+                    "enum": [
+                      "positive-displacement",
+                      "hst-turbo",
+                      "centrifugal",
+                      "multistage"
+                    ]
+                  },
+                  "airFlowAm3H": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "dischargePressureKpa": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "installedKW": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "configuration": {
+                    "type": "string"
+                  },
+                  "vfd": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "blowerType",
+                  "airFlowAm3H",
+                  "dischargePressureKpa",
+                  "installedKW",
+                  "configuration"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "screen"
+                  },
+                  "screenType": {
+                    "type": "string",
+                    "enum": [
+                      "coarse",
+                      "fine",
+                      "band",
+                      "step",
+                      "drum"
+                    ]
+                  },
+                  "apertureMm": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "channelWidthM": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "designFlowM3H": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "installedKW": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "configuration": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "screenType",
+                  "apertureMm"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "dosing_skid"
+                  },
+                  "chemical": {
+                    "type": "string",
+                    "enum": [
+                      "alum",
+                      "ferric-chloride",
+                      "cationic-polymer",
+                      "hydrated-lime",
+                      "caustic-soda",
+                      "sodium-hypochlorite"
+                    ]
+                  },
+                  "doseMgL": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "dailyConsumptionKg": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "storageDays": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "storageTankVolumeM3": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "meteringPumps": {
+                    "type": "object",
+                    "properties": {
+                      "duty": {
+                        "type": "number"
+                      },
+                      "standby": {
+                        "type": "number"
+                      },
+                      "pumpType": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "duty",
+                      "standby",
+                      "pumpType"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "bunded": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "bundVolumeM3": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "chemical",
+                  "doseMgL",
+                  "dailyConsumptionKg",
+                  "storageDays",
+                  "storageTankVolumeM3",
+                  "meteringPumps",
+                  "bunded"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "equipment"
+                  },
+                  "equipmentType": {
+                    "type": "string",
+                    "enum": [
+                      "fine-screen",
+                      "grit-classifier",
+                      "mbr-cassette",
+                      "belt-thickener",
+                      "centrifuge",
+                      "uv-channel",
+                      "mixer",
+                      "scraper-bridge",
+                      "penstock",
+                      "clarifier-mechanism",
+                      "other"
+                    ]
+                  },
+                  "capacity": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "installedKW": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "configuration": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "equipmentType"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "ports": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "inlet",
+                    "outlet",
+                    "recycle",
+                    "waste",
+                    "air",
+                    "chemical",
+                    "power",
+                    "signal"
+                  ]
+                },
+                "localOffset": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "z": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ],
+                  "additionalProperties": false
+                },
+                "nominalBoreMm": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "number"
+                    },
+                    "unit": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "role",
+                "localOffset"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "toObjectId": {
+                  "type": "string"
+                },
+                "toPort": {
+                  "type": "string"
+                },
+                "medium": {
+                  "type": "string",
+                  "enum": [
+                    "water",
+                    "sludge",
+                    "air",
+                    "chemical",
+                    "power",
+                    "signal"
+                  ]
+                }
+              },
+              "required": [
+                "toObjectId",
+                "toPort",
+                "medium"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "designNotes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sourceCalc": {
+            "type": "object",
+            "properties": {
+              "flowsheetId": {
+                "type": "string"
+              },
+              "nodeId": {
+                "type": "string"
+              },
+              "unitType": {
+                "type": "string"
+              },
+              "sizingKeys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "records": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "symbol": {
+                      "type": "string"
+                    },
+                    "equation": {
+                      "type": "string"
+                    },
+                    "inputs": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "type": "number"
+                          },
+                          "unit": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "unit",
+                          "source"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "result": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "number"
+                        },
+                        "unit": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "unit"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "citation": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "symbol",
+                    "equation",
+                    "inputs",
+                    "result",
+                    "citation"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "calcRevision": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "flowsheetId",
+              "nodeId",
+              "unitType",
+              "sizingKeys",
+              "records"
+            ],
+            "additionalProperties": false
+          },
+          "ext": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "id",
+          "tag",
+          "class",
+          "discipline",
+          "label",
+          "geometry",
+          "placement",
+          "material",
+          "capacity",
+          "params",
+          "ports",
+          "connections",
+          "designNotes"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "siteBoundary": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "corridors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "maintenance",
+                  "vehicle"
+                ]
+              },
+              "widthM": {
+                "type": "number"
+              },
+              "polygon": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "widthM",
+              "polygon"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "bunds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "servesObjectId": {
+                "type": "string"
+              },
+              "capacityM3": {
+                "type": "number"
+              },
+              "polygon": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "servesObjectId",
+              "capacityM3",
+              "polygon"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "pipeRoutes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "fromObjectId": {
+                "type": "string"
+              },
+              "fromPort": {
+                "type": "string"
+              },
+              "toObjectId": {
+                "type": "string"
+              },
+              "toPort": {
+                "type": "string"
+              },
+              "medium": {
+                "type": "string",
+                "enum": [
+                  "water",
+                  "sludge",
+                  "air",
+                  "chemical",
+                  "power",
+                  "signal"
+                ]
+              },
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "fromObjectId",
+              "fromPort",
+              "toObjectId",
+              "toPort",
+              "medium",
+              "points"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "objectIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warning"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "severity"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "rulesApplied": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "rule": {
+                "type": "string"
+              },
+              "objectId": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "rule"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "siteBoundary",
+        "corridors",
+        "bunds",
+        "pipeRoutes",
+        "violations",
+        "rulesApplied"
+      ],
+      "additionalProperties": false
+    },
+    "boq": {
+      "type": "object",
+      "properties": {
+        "grandTotalZar": {
+          "type": "number"
+        },
+        "lineItemsByCategory": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {}
+          }
+        }
+      },
+      "required": [
+        "grandTotalZar",
+        "lineItemsByCategory"
+      ],
+      "additionalProperties": false
+    },
+    "compliance": {
+      "type": "object",
+      "properties": {
+        "standard": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "perParameter": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "target": {
+                "type": "number"
+              },
+              "predicted": {
+                "type": "number"
+              },
+              "pass": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "target",
+              "predicted",
+              "pass"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "standard",
+        "pass",
+        "perParameter"
+      ],
+      "additionalProperties": false
+    },
+    "totals": {
+      "type": "object",
+      "properties": {
+        "capexZar": {
+          "type": "number"
+        },
+        "installedKW": {
+          "type": "number"
+        },
+        "footprintM2": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "capexZar",
+        "installedKW",
+        "footprintM2"
+      ],
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "calculations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "symbol": {
+                "type": "string"
+              },
+              "equation": {
+                "type": "string"
+              },
+              "inputs": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "number"
+                    },
+                    "unit": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "unit",
+                    "source"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "result": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number"
+                  },
+                  "unit": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit"
+                ],
+                "additionalProperties": false
+              },
+              "citation": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "label",
+              "symbol",
+              "equation",
+              "inputs",
+              "result",
+              "citation"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "layoutRules": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "calculations",
+        "layoutRules"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "meta",
+    "coordinateSystem",
+    "inputs",
+    "basis",
+    "graph",
+    "objects",
+    "layout",
+    "boq",
+    "compliance",
+    "totals",
+    "provenance"
+  ],
+  "additionalProperties": false
+}
