@@ -19,6 +19,7 @@
     "typescript": "5.9.2"
   },
   "dependencies": {
-    "@repo/sim-engine": "*"
+    "@repo/sim-engine": "*",
+    "zod": "^4.3.6"
   }
 }
