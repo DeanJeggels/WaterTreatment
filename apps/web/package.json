@@ -13,7 +13,10 @@
   "dependencies": {
     "@base-ui/react": "^1.3.0",
     "@hookform/resolvers": "^5.2.2",
+    "@repo/auto-design": "*",
     "@repo/design-library": "*",
+    "@repo/export-kit": "*",
+    "@repo/object-model": "*",
     "@repo/sim-engine": "*",
     "@repo/ui": "*",
     "@supabase/ssr": "^0.10.0",
