@@ -110,9 +110,23 @@ export function defaultInputs(tier: DischargeTier = 'General'): DesignInputs {
 // MLE-MBR design inputs (the redesigned form — the system is now MLE-MBR)
 // ---------------------------------------------------------------------------
 
+// ---- Stage 1 configuration inputs (master spec) ----
+export type InstallationType =
+  | 'underground_civil'
+  | 'above_ground_civil'
+  | 'container_20ft'
+  | 'container_40ft'
+  | 'container_twin_20ft'
+  | 'open_frame_skid';
+export type NumberOfTrains = 'single' | 'dual' | 'multiple';
+export type MaintenanceAccess = 'standard' | 'full';
+export type TankPlacement = 'above_ground' | 'in_ground';
+export type ClientPriority = 'lowest_cost' | 'best_access' | 'smallest_footprint' | 'future_expansion';
+
 /** The small input set for the MLE-MBR design (everything else is derived). */
 export interface MleMbrInputs {
   meta: ProjectMeta;
+  // --- process inputs ---
   /** Average dry-weather flow, m³/d. */
   adwfM3d: number;
   /** Raw influent total COD, mg/L (all other influent quality is derived). */
@@ -126,8 +140,16 @@ export interface MleMbrInputs {
   mbrRequired: boolean;
   membraneModel: MembraneModel;
   landUse: LandUse;
-  /** Available site area, m² (for the plot layout). */
-  siteAreaM2: number;
+  // --- Stage 1 configuration inputs ---
+  installationType: InstallationType;
+  /** Available site footprint, metres. */
+  footprintLengthM: number;
+  footprintWidthM: number;
+  numberOfTrains: NumberOfTrains;
+  maintenanceAccess: MaintenanceAccess;
+  tankPlacement: TankPlacement;
+  containerStacking: boolean;
+  clientPriority: ClientPriority;
   siteBoundary?: Array<{ x: number; y: number }>;
 }
 
@@ -145,6 +167,13 @@ export function defaultMleMbrInputs(): MleMbrInputs {
     mbrRequired: true,
     membraneModel: 'megavision',
     landUse: 'residential',
-    siteAreaM2: 5000,
+    installationType: 'above_ground_civil',
+    footprintLengthM: 80,
+    footprintWidthM: 60,
+    numberOfTrains: 'single',
+    maintenanceAccess: 'standard',
+    tankPlacement: 'above_ground',
+    containerStacking: false,
+    clientPriority: 'best_access',
   };
 }

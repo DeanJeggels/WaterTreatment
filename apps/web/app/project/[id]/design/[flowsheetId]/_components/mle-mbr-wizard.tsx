@@ -33,7 +33,7 @@ export function MleMbrWizard({ initialName, initialClient, initialLocation, onSu
     if (!(v.adwfM3d > 0)) e.push('ADWF must be greater than 0.');
     if (!(v.codMgL > 0)) e.push('Influent COD must be greater than 0.');
     if (!(v.tminC < v.tmaxC)) e.push('Minimum temperature must be below maximum.');
-    if (!(v.siteAreaM2 > 0)) e.push('Site area must be greater than 0.');
+    if (!(v.footprintLengthM > 0 && v.footprintWidthM > 0)) e.push('Site footprint length and width must be greater than 0.');
     return e;
   }, [v]);
 
@@ -65,15 +65,31 @@ export function MleMbrWizard({ initialName, initialClient, initialLocation, onSu
           <Field label="Project name" className="sm:col-span-2"><Input value={v.meta.projectName} onChange={(e) => setMeta({ projectName: e.target.value })} /></Field>
           <Field label="Client (optional)"><Input value={v.meta.client ?? ''} onChange={(e) => setMeta({ client: e.target.value })} /></Field>
           <Field label="Site location (optional)"><Input value={v.meta.siteLocation ?? ''} onChange={(e) => setMeta({ siteLocation: e.target.value })} /></Field>
-          <Field label="Site area (m²)">{num(v.siteAreaM2, (n) => set({ siteAreaM2: n }))}</Field>
+          <Field label="Site footprint length (m)">{num(v.footprintLengthM, (n) => set({ footprintLengthM: n }))}</Field>
+          <Field label="Site footprint width (m)">{num(v.footprintWidthM, (n) => set({ footprintWidthM: n }))}</Field>
           <Field label="Site elevation (m AMSL)">{num(v.elevationM, (n) => set({ elevationM: n }))}</Field>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-lg">Plant configuration</CardTitle>
+          <CardDescription>Drives the mechanical layout and optimisation (Stages 4–5).</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Installation type">{select(v.installationType, [['underground_civil', 'Underground civil'], ['above_ground_civil', 'Above-ground civil'], ['container_20ft', 'Containerised 20ft'], ['container_40ft', 'Containerised 40ft'], ['container_twin_20ft', 'Containerised twin 20ft'], ['open_frame_skid', 'Open-frame skid']], (x) => set({ installationType: x }))}</Field>
+          <Field label="Number of treatment trains">{select(v.numberOfTrains, [['single', 'Single'], ['dual', 'Dual'], ['multiple', 'Multiple']], (x) => set({ numberOfTrains: x }))}</Field>
+          <Field label="Maintenance access level">{select(v.maintenanceAccess, [['standard', 'Standard'], ['full', 'Full']], (x) => set({ maintenanceAccess: x }))}</Field>
+          <Field label="Biological tank placement">{select(v.tankPlacement, [['above_ground', 'Above ground'], ['in_ground', 'In-ground']], (x) => set({ tankPlacement: x }))}</Field>
+          <Field label="Client priority">{select(v.clientPriority, [['lowest_cost', 'Lowest cost'], ['best_access', 'Best access'], ['smallest_footprint', 'Smallest footprint'], ['future_expansion', 'Future expansion']], (x) => set({ clientPriority: x }))}</Field>
+          <div className="flex items-end">{check(v.containerStacking, 'Container stacking allowed', (b) => set({ containerStacking: b }))}</div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-lg">Flow, load & temperature</CardTitle>
-          <CardDescription>The engine derives all influent quality from COD + land use.</CardDescription>
+          <CardDescription>The engine derives all influent quality from COD (universal ratios); land use is recorded for context.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <Field label="ADWF (m³/d)">{num(v.adwfM3d, (n) => set({ adwfM3d: n }))}</Field>

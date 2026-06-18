@@ -11,6 +11,11 @@ export type {
   DesignPreferences,
   DesignInputs,
   MleMbrInputs,
+  InstallationType,
+  NumberOfTrains,
+  MaintenanceAccess,
+  TankPlacement,
+  ClientPriority,
 } from './inputs';
 export { defaultInputs, defaultMleMbrInputs } from './inputs';
 

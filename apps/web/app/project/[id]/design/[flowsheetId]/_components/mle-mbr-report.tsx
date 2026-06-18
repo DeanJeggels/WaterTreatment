@@ -53,7 +53,7 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
       <Section n={2} title="Basis of design">
         <div className="grid grid-cols-2 gap-6">
           <T head={['Flow', 'm³/d']} rows={[['ADWF', d.flows.adwf], ['AWWF', d.flows.awwf], ['PDWF', d.flows.pdwf], ['PWWF', d.flows.pwwf]]} />
-          <T head={['Influent', 'mg/L']} rows={[['COD', i.COD], ['BOD', i.BOD], ['TKN', i.TKN], ['FSA', i.FSA], ['TP', i.TP], ['OP', i.OP], ['TSS', i.TSS], ['FOG', i.FOG], ['Alkalinity', i.alkalinity]]} />
+          <T head={['Influent', 'mg/L']} rows={[['COD', i.COD], ['BOD', i.BOD], ['TKN', i.TKN], ['FSA', i.FSA], ['TP', i.TP], ['OP', i.OP], ['TSS', i.TSS], ['ISS', i.ISS], ['FOG', i.FOG], ['Alkalinity', i.alkalinity]]} />
         </div>
         <div className="mt-3">
           <T head={['Effluent target', 'mg/L']} rows={[['COD', limits.COD ?? '—'], ['NH₃-N', limits.NH3N ?? '—'], ['NO₃-N', limits.NO3N ?? '—'], ['TSS', limits.TSS ?? '—'], ['TP', limits.TP ?? '—']]} />
@@ -109,6 +109,7 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
           ['SMU modules', d.mbr.moduleCount, 'ea'],
           ['Air scour', `${d.mbr.airScourNm3h} Nm³/h (${d.mbr.airScourAm3h} Am³/h)`, ''],
           ['Permeate pump duty', d.mbr.permeateDutyM3h, 'm³/h'],
+          ['CIP tank volume', d.mbr.cipTankM3, 'm³'],
         ]} />
       </Section>
 
@@ -122,7 +123,7 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
 
       <Section n={8} title="Solids handling">
         <p className="mb-2 text-xs">Waste activated sludge is drawn directly from the membrane tank at MLSS concentration; recommended thickening: {d.solids.thickening}; dewatering: {d.solids.dewatering}.</p>
-        <T head={['Parameter', 'Value', 'Unit']} rows={[['WAS rate', d.solids.wasM3d, 'm³/d'], ['WAS TSS', d.solids.wasTssMgL.toLocaleString(), 'mg/L'], ['WAS VSS', d.solids.wasVssMgL.toLocaleString(), 'mg/L']]} />
+        <T head={['Parameter', 'Value', 'Unit']} rows={[['WAS rate', d.solids.wasM3d, 'm³/d'], ['WAS TSS', d.solids.wasTssMgL.toLocaleString(), 'mg/L'], ['WAS VSS', d.solids.wasVssMgL.toLocaleString(), 'mg/L'], ['Thickening silo volume', d.solids.thickeningSiloM3, 'm³']]} />
       </Section>
 
       <Section n={9} title="Utilities summary">
@@ -130,7 +131,9 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
           ['Installed power', d.utilities.installedKW, 'kW'],
           ['Duty power', d.utilities.dutyKW, 'kW'],
           ['Specific energy', d.utilities.energyKwhPerM3, 'kWh/m³'],
-          ['Sodium hypochlorite', d.utilities.naoclLPerDay, 'L/d'],
+          ['Sodium hypochlorite (daily)', d.utilities.naoclLPerDay, 'L/d'],
+          ['Sodium hypochlorite (hourly)', d.utilities.naoclLPerHour, 'L/h'],
+          ['NaOCl bulk storage (30 d)', d.utilities.naoclStorageM3, 'm³'],
           ['CIP acid', d.utilities.cipAcidLPerDay, 'L/d'],
           ['Service water', d.utilities.serviceWaterM3d, 'm³/d'],
         ]} />

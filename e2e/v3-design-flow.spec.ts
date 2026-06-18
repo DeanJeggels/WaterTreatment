@@ -56,7 +56,7 @@ test.describe('AquaSim MLE-MBR guided design (authenticated)', () => {
 
   test('client name carries over to the Proposal tab', async ({ page }) => {
     await newGuidedProject(page, 'E2E MBR Carryover');
-    await page.getByLabel(/^client/i).fill('Enoch Mgijima LM');
+    await page.getByLabel('Client (optional)').fill('Enoch Mgijima LM');
     await page.getByRole('button', { name: /generate mle-mbr design/i }).click();
     await expect(page.getByRole('img', { name: /plant layout/i })).toBeVisible({ timeout: 20_000 });
 

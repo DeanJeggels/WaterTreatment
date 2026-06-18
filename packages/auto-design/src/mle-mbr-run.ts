@@ -14,7 +14,7 @@ import {
   type DesignPackage,
   type EngineeringObject,
 } from '@repo/object-model';
-import { layout, rectangularSite } from '@repo/layout-engine';
+import { layout } from '@repo/layout-engine';
 import type { MleMbrInputs } from './inputs';
 
 export interface MleMbrRunMeta {
@@ -57,7 +57,11 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
   // packing, then snap it to the parent's footprint after layout.
   const cassette = objects.find((o) => o.ext?.insideParent);
   const placeable = objects.filter((o) => o !== cassette);
-  const site = input.siteBoundary?.length ? { boundary: input.siteBoundary } : rectangularSite(input.siteAreaM2);
+  const L = input.footprintLengthM;
+  const W = input.footprintWidthM;
+  const site = input.siteBoundary?.length
+    ? { boundary: input.siteBoundary }
+    : { boundary: [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: W }, { x: 0, y: W }] };
   const plantLayout = layout(placeable, site);
   if (cassette) {
     const parent = objects.find((o) => o.id === cassette.ext!.parentId);

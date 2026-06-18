@@ -55,6 +55,17 @@ export interface MleMbrConstants {
   fSup: number; // unbiodeg particulate COD fraction
   fSus: number; // unbiodeg soluble COD fraction
   codFilteredFraction: number; // soluble COD / total COD
+  // influent estimation ratios — master prompt universal defaults (Stage 2)
+  tknPerCod: number;
+  tpPerCod: number;
+  tssPerCod: number;
+  bodPerCod: number;
+  tocPerCod: number;
+  fogPerCod: number;
+  fsaPerTkn: number;
+  opPerTp: number;
+  issPerTss: number;
+  alkalinityMgL: number;
   // nitrifier kinetics @20
   muAm20: number;
   Kn20: number;
@@ -90,6 +101,16 @@ const DEFAULTS: MleMbrConstants = {
   fSup: 0.15,
   fSus: 0.06,
   codFilteredFraction: 0.29,
+  tknPerCod: 0.075,
+  tpPerCod: 0.015,
+  tssPerCod: 0.45,
+  bodPerCod: 0.44,
+  tocPerCod: 0.375,
+  fogPerCod: 0.011,
+  fsaPerTkn: 0.75,
+  opPerTp: 0.6,
+  issPerTss: 0.2,
+  alkalinityMgL: 220,
   muAm20: 0.45,
   Kn20: 1,
   bA20: 0.04,
@@ -101,28 +122,6 @@ const DEFAULTS: MleMbrConstants = {
   minDOmgL: 2,
   mbrOpDurationH: 19.2,
   mbrMembranePeakFactor: 1.5,
-};
-
-/** Influent estimation ratios per land use (municipal/residential grounded in the xlsm example). */
-interface LandUseRatios {
-  tknPerCod: number;
-  tpPerCod: number;
-  tssPerCod: number;
-  tocPerCod: number;
-  bodPerCod: number;
-  fogPerCod: number;
-  fsaPerTkn: number;
-  opPerTp: number;
-  alkalinityMgL: number;
-}
-
-const LAND_USE_RATIOS: Record<LandUse, LandUseRatios> = {
-  // Grounded in WWTP Design.xlsm "Example 1" (COD 900 → TKN 70, TP 15, TSS 360, TOC 300).
-  residential: { tknPerCod: 0.0778, tpPerCod: 0.0167, tssPerCod: 0.4, tocPerCod: 0.333, bodPerCod: 0.45, fogPerCod: 0.011, fsaPerTkn: 0.75, opPerTp: 0.6, alkalinityMgL: 220 },
-  commercial: { tknPerCod: 0.06, tpPerCod: 0.013, tssPerCod: 0.45, tocPerCod: 0.33, bodPerCod: 0.45, fogPerCod: 0.02, fsaPerTkn: 0.7, opPerTp: 0.6, alkalinityMgL: 200 },
-  shopping_centre: { tknPerCod: 0.05, tpPerCod: 0.012, tssPerCod: 0.45, tocPerCod: 0.33, bodPerCod: 0.5, fogPerCod: 0.04, fsaPerTkn: 0.65, opPerTp: 0.55, alkalinityMgL: 180 },
-  hospital: { tknPerCod: 0.08, tpPerCod: 0.018, tssPerCod: 0.4, tocPerCod: 0.33, bodPerCod: 0.45, fogPerCod: 0.015, fsaPerTkn: 0.75, opPerTp: 0.6, alkalinityMgL: 220 },
-  industrial: { tknPerCod: 0.04, tpPerCod: 0.01, tssPerCod: 0.5, tocPerCod: 0.35, bodPerCod: 0.45, fogPerCod: 0.03, fsaPerTkn: 0.65, opPerTp: 0.55, alkalinityMgL: 150 },
 };
 
 interface MembraneSpec {
@@ -181,7 +180,7 @@ const rec = (
 // ---- output shape ----
 export interface DerivedInfluent {
   COD: number; CODfiltered: number; BOD: number; TOC: number;
-  TKN: number; FSA: number; TP: number; OP: number; TSS: number; FOG: number; alkalinity: number; pH: number;
+  TKN: number; FSA: number; TP: number; OP: number; TSS: number; ISS: number; FOG: number; alkalinity: number; pH: number;
 }
 export interface CodFractionation { USO: number; BSO: number; UPO: number; BPO: number; totalBiodegradable: number; totalUnbiodegradable: number; fSbs: number; }
 export interface FlowSet { adwf: number; awwf: number; pdwf: number; pwwf: number; }
@@ -210,11 +209,11 @@ export interface MleMbrDesign {
   };
   mbr: {
     included: boolean; model: string; fluxLmh: number; membraneAreaM2: number; moduleCount: number; moduleAreaM2: number;
-    permeateDutyM3h: number; airScourNm3h: number; airScourAm3h: number; scourBlowerKW: number;
+    permeateDutyM3h: number; airScourNm3h: number; airScourAm3h: number; scourBlowerKW: number; cipTankM3: number;
   };
   tanks: SizedTank[];
-  solids: { wasM3d: number; wasTssMgL: number; wasVssMgL: number; thickening: string; dewatering: string };
-  utilities: { installedKW: number; dutyKW: number; energyKwhPerM3: number; naoclLPerDay: number; cipAcidLPerDay: number; serviceWaterM3d: number };
+  solids: { wasM3d: number; wasTssMgL: number; wasVssMgL: number; thickeningSiloM3: number; thickening: string; dewatering: string };
+  utilities: { installedKW: number; dutyKW: number; energyKwhPerM3: number; naoclLPerDay: number; naoclLPerHour: number; naoclStorageM3: number; cipAcidLPerDay: number; serviceWaterM3d: number };
   calculationRecords: CalculationRecord[];
   warnings: string[];
 }
@@ -234,15 +233,15 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
   records.push(rec('Average wet-weather flow', 'AWWF', 'AWWF = ADWF × awwfFactor', { ADWF: { value: Q, unit: 'm3/d', source: 'user input' } }, awwf, 'm3/d'));
   records.push(rec('Peak wet-weather flow', 'PWWF', 'PWWF = AWWF × PF', { AWWF: { value: awwf, unit: 'm3/d', source: 'computed' }, PF: { value: k.peakFactor, unit: '', source: 'default' } }, pwwf, 'm3/d'));
 
-  // ---- [0/1] Derived influent + COD fractionation ----
-  const r = LAND_USE_RATIOS[basis.landUse];
+  // ---- [0/1] Derived influent (master universal ratios) + COD fractionation ----
   const COD = basis.codMgL;
-  const TKN = COD * r.tknPerCod;
-  const TP = COD * r.tpPerCod;
+  const TKN = COD * k.tknPerCod;
+  const TP = COD * k.tpPerCod;
+  const TSS = COD * k.tssPerCod;
   const influent: DerivedInfluent = {
-    COD, CODfiltered: COD * k.codFilteredFraction, BOD: COD * r.bodPerCod, TOC: COD * r.tocPerCod,
-    TKN, FSA: TKN * r.fsaPerTkn, TP, OP: TP * r.opPerTp, TSS: COD * r.tssPerCod, FOG: COD * r.fogPerCod,
-    alkalinity: r.alkalinityMgL, pH: 7.5,
+    COD, CODfiltered: COD * k.codFilteredFraction, BOD: COD * k.bodPerCod, TOC: COD * k.tocPerCod,
+    TKN, FSA: TKN * k.fsaPerTkn, TP, OP: TP * k.opPerTp, TSS, ISS: TSS * k.issPerTss, FOG: COD * k.fogPerCod,
+    alkalinity: k.alkalinityMgL, pH: 7.5,
   };
   const soluble = influent.CODfiltered;
   const USO = k.fSus * COD;
@@ -276,7 +275,7 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
   // ---- [4] Sludge masses ----
   const FSi = (COD * Q) / 1000;
   const FSbi = (totalBiodeg * Q) / 1000;
-  const FXii = (influent.TSS * 0.2 * Q) / 1000;
+  const FXii = (influent.TSS * k.issPerTss * Q) / 1000;
   const Mbh = FSbi * C28;
   const Mxeh = k.fH * bHTmin * Rs * Mbh;
   const MXI = ((k.fSup * FSi) / k.fcv) * Rs;
@@ -387,8 +386,14 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
   const dutyKW = installedKW * 0.85;
   const energyKwhPerM3 = (dutyKW * 24) / Q;
   const naoclLPerDay = (Q * 1000 * 2) / 150000; // 2 mg/L Cl, 150 g/L NaOCl
+  const naoclLPerHour = naoclLPerDay / 24;
+  const naoclStorageM3 = round((naoclLPerDay * 30) / 1000, 2); // 30-day bulk storage
   const cipAcidLPerDay = round(membraneAreaReq * 0.002, 2); // citric/HCl CIP estimate
   const serviceWaterM3d = round(Q * 0.02, 2);
+  // CIP tank = 1.5 × membrane module envelope volume (SMU envelope ≈ 2 m³/module — flagged assumption)
+  const cipTankM3 = round(1.5 * moduleCount * 2.0, 2);
+  // Sludge thickening silo — 3-day WAS buffer at ~2.5× thickening
+  const thickeningSiloM3 = round(Qw * 3 * 0.4, 2);
 
   if (k.mlssMgL > 12000) warnings.push(`MLSS ${k.mlssMgL} mg/L above the typical MBR ceiling (8000–12000).`);
   if (config === 'A2O_UCT') warnings.push('P-removal selected: anaerobic zone added (UCT) — EBPR sizing is simplified; confirm at detailed design.');
@@ -415,11 +420,11 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
     },
     mbr: {
       included: basis.mbrRequired, model: m.label, fluxLmh: m.fluxLmh, membraneAreaM2: round(membraneAreaReq, 0), moduleCount, moduleAreaM2: round(moduleArea, 0),
-      permeateDutyM3h: round(flowToTreat, 2), airScourNm3h: round(scourNm3h, 1), airScourAm3h: round(scourAm3h, 1), scourBlowerKW: round(scourBlowerKW, 2),
+      permeateDutyM3h: round(flowToTreat, 2), airScourNm3h: round(scourNm3h, 1), airScourAm3h: round(scourAm3h, 1), scourBlowerKW: round(scourBlowerKW, 2), cipTankM3,
     },
     tanks,
-    solids: { wasM3d: round(Qw, 2), wasTssMgL: k.mlssMgL, wasVssMgL: round(k.mlssMgL * 0.72, 0), thickening: 'Gravity thickener / picket-fence', dewatering: 'Belt press or screw press' },
-    utilities: { installedKW: round(installedKW, 1), dutyKW: round(dutyKW, 1), energyKwhPerM3: round(energyKwhPerM3, 2), naoclLPerDay: round(naoclLPerDay, 2), cipAcidLPerDay, serviceWaterM3d },
+    solids: { wasM3d: round(Qw, 2), wasTssMgL: k.mlssMgL, wasVssMgL: round(k.mlssMgL * 0.72, 0), thickeningSiloM3, thickening: 'Gravity thickener / picket-fence', dewatering: 'Belt press or screw press' },
+    utilities: { installedKW: round(installedKW, 1), dutyKW: round(dutyKW, 1), energyKwhPerM3: round(energyKwhPerM3, 2), naoclLPerDay: round(naoclLPerDay, 2), naoclLPerHour: round(naoclLPerHour, 3), naoclStorageM3, cipAcidLPerDay, serviceWaterM3d },
     calculationRecords: records,
     warnings,
   };
