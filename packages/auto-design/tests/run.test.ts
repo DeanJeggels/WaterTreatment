@@ -48,4 +48,25 @@ describe('runAutoDesign stages 1-5 (T2.3)', () => {
     const r = runAutoDesign(inp);
     expect(r.graph.nodes.find((n) => n.data.unitType === 'influent')!.data.parameters.flow).toBe(15000);
   });
+
+  it('stage 6: instantiates objects, none for stream boundaries, all traceable [T3.4]', () => {
+    const r = runAutoDesign(validInputs(), { flowsheetId: 'fs-xyz' });
+    expect(r.objects.length).toBeGreaterThan(0);
+    // No object materialises the influent/effluent stream boundaries.
+    const boundaryNodeIds = r.graph.nodes
+      .filter((n) => n.data.unitType === 'influent' || n.data.unitType === 'effluent')
+      .map((n) => n.id);
+    for (const o of r.objects) {
+      expect(boundaryNodeIds).not.toContain(o.sourceCalc!.nodeId);
+      // Every object traces back to a real simulated node.
+      expect(r.results.nodeResults[o.sourceCalc!.nodeId]).toBeDefined();
+      expect(o.sourceCalc!.flowsheetId).toBe('fs-xyz');
+    }
+  });
+
+  it('stage 6 is deterministic (objects snapshot-stable)', () => {
+    expect(JSON.stringify(runAutoDesign(validInputs()).objects)).toBe(
+      JSON.stringify(runAutoDesign(validInputs()).objects),
+    );
+  });
 });
