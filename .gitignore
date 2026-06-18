@@ -40,3 +40,9 @@ yarn-error.log*
 # Large binary files (source spreadsheets, etc.)
 *.xlsm
 *.xlsx
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/e2e/.auth/
