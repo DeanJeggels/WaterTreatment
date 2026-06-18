@@ -13,7 +13,8 @@ import {
   type WaterQuality,
   type DischargeStandards,
 } from '@repo/sim-engine';
-import { instantiateObjects, type EngineeringObject } from '@repo/object-model';
+import { instantiateObjects, type EngineeringObject, type PlantLayout } from '@repo/object-model';
+import { layout, rectangularSite } from '@repo/layout-engine';
 import type { DesignInputs } from './inputs';
 import { validateInputs, type ValidationError } from './validate';
 import { selectTrain, type ProcessTopology } from './select-train';
@@ -40,6 +41,7 @@ export interface AutoDesignRunResult {
   boq: AggregatedBoQ;
   compliance: ComplianceResult;
   objects: EngineeringObject[];
+  layout: PlantLayout;
 }
 
 export interface RunOptions {
@@ -114,6 +116,12 @@ export function runAutoDesign(input: DesignInputs, opts: RunOptions = {}): AutoD
     { flowsheetId },
   );
 
+  // [7] rule-based 2D layout — writes placement back onto objects
+  const site = input.siteBoundary?.length
+    ? { boundary: input.siteBoundary }
+    : rectangularSite(input.siteAreaM2);
+  const plantLayout = layout(objects, site);
+
   return {
     inputs: input,
     topology,
@@ -122,5 +130,6 @@ export function runAutoDesign(input: DesignInputs, opts: RunOptions = {}): AutoD
     boq,
     compliance: { standard: input.dischargeStandard, pass, perParameter },
     objects,
+    layout: plantLayout,
   };
 }

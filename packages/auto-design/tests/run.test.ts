@@ -69,4 +69,18 @@ describe('runAutoDesign stages 1-5 (T2.3)', () => {
       JSON.stringify(runAutoDesign(validInputs()).objects),
     );
   });
+
+  it('stage 7: every object has a non-default placement and a layout block [T4.5]', () => {
+    const r = runAutoDesign(validInputs());
+    expect(r.objects.every((o) => o.placement.location.x !== 0 || o.placement.location.y !== 0)).toBe(true);
+    expect(Array.isArray(r.layout.violations)).toBe(true);
+    expect(r.layout.rulesApplied.length).toBeGreaterThan(0);
+    expect(r.layout.siteBoundary.length).toBeGreaterThan(2);
+  });
+
+  it('stage 7 is deterministic (layout + placements byte-identical)', () => {
+    expect(JSON.stringify(runAutoDesign(validInputs()).layout)).toBe(
+      JSON.stringify(runAutoDesign(validInputs()).layout),
+    );
+  });
 });
