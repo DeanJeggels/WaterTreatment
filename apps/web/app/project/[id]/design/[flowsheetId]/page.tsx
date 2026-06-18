@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import type { DesignInputs } from '@repo/auto-design';
 import { ProjectEditorTabs } from '@/components/layout/project-editor-tabs';
 import { PageShell } from '@/components/layout/page-shell';
 import { useProjectStore } from '@/stores/project-store';
+import { persistDesignInputs } from '@/lib/design/persist-inputs';
 import { DesignWizard } from './_components/design-wizard';
 
 /**
@@ -19,11 +21,25 @@ import { DesignWizard } from './_components/design-wizard';
 export default function DesignPage() {
   const params = useParams<{ id: string; flowsheetId: string }>();
   const { projectName, flowsheetName, setProject, loadFlowsheet } = useProjectStore();
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setProject(params.id, params.flowsheetId);
     loadFlowsheet();
   }, [params.id, params.flowsheetId, setProject, loadFlowsheet]);
+
+  async function handleSubmit(inputs: DesignInputs) {
+    // T1.4: persist the inputs draft (package stays NULL until the design runs in T5.3).
+    setSubmitting(true);
+    try {
+      await persistDesignInputs(params.id, params.flowsheetId, inputs);
+      toast.success('Design inputs saved');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save design inputs');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <PageShell>
@@ -48,14 +64,7 @@ export default function DesignPage() {
             compliance verdict and downloadable package — every number traceable to a calculation.
           </p>
         </div>
-        <DesignWizard
-          initialName={projectName}
-          onSubmit={(inputs: DesignInputs) => {
-            // T1.3: UI only — round-trip the collected inputs. Persistence is wired in T1.4.
-            // eslint-disable-next-line no-console
-            console.log('DesignInputs', inputs);
-          }}
-        />
+        <DesignWizard initialName={projectName} onSubmit={handleSubmit} submitting={submitting} />
       </main>
     </PageShell>
   );
