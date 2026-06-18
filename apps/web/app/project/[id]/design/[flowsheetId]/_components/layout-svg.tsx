@@ -62,7 +62,20 @@ export function LayoutSvg({ objects, layout }: Props) {
   const sx = (x: number) => x - minX;
   const sy = (y: number) => maxY - y; // north-up flip
   const poly = (pts: { x: number; y: number }[]) => pts.map((p) => `${sx(p.x)},${sy(p.y)}`).join(' ');
-  const fontSize = Math.max(W, H) / 70;
+  const fontSize = Math.min(6, Math.max(1.8, Math.min(W, H) / 55));
+  const lineHeight = fontSize * 1.15;
+
+  // Stagger labels within each band (row) so adjacent small units don't collide.
+  const labelLevel = new Map<string, number>();
+  const rows = new Map<number, EngineeringObject[]>();
+  for (const o of objects) {
+    const k = Math.round(o.placement.location.y / 6);
+    (rows.get(k) ?? rows.set(k, []).get(k)!).push(o);
+  }
+  for (const arr of rows.values()) {
+    arr.sort((a, b) => a.placement.location.x - b.placement.location.x);
+    arr.forEach((o, i) => labelLevel.set(o.id, i % 2));
+  }
 
   const hasViolation = layout.violations.some((v) => v.severity === 'error');
 
@@ -99,8 +112,13 @@ export function LayoutSvg({ objects, layout }: Props) {
           const fill = ZONE_FILL[o.placement.zone ?? 'process'] ?? '#e2e8f0';
           const stroke = '#334155';
           const sw = W / 500;
+          const mnemonic = o.tag.split('-')[0]; // short label; full tag on hover
+          const halfH = o.geometry.footprint.widthM / 2;
+          // label sits just below the unit, staggered one line for odd-ranked neighbours
+          const labelY = sy(y) + halfH + lineHeight * (0.9 + (labelLevel.get(o.id) ?? 0));
           return (
             <g key={o.id}>
+              <title>{`${o.tag} — ${o.label}`}</title>
               {o.geometry.shape === 'circle' && o.geometry.diameterM ? (
                 <circle cx={sx(x)} cy={sy(y)} r={o.geometry.diameterM.value / 2} fill={fill} stroke={stroke} strokeWidth={sw} />
               ) : (
@@ -114,8 +132,18 @@ export function LayoutSvg({ objects, layout }: Props) {
                   strokeWidth={sw}
                 />
               )}
-              <text x={sx(x)} y={sy(y)} fontSize={fontSize} textAnchor="middle" dominantBaseline="middle" fill="#0f172a">
-                {o.tag}
+              <text
+                x={sx(x)}
+                y={labelY}
+                fontSize={fontSize}
+                textAnchor="middle"
+                fill="#0f172a"
+                stroke="#ffffff"
+                strokeWidth={fontSize / 6}
+                paintOrder="stroke"
+                style={{ pointerEvents: 'none' }}
+              >
+                {mnemonic}
               </text>
             </g>
           );
