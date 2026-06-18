@@ -18,3 +18,11 @@ export { validateInputs } from './validate';
 
 export type { TrainOptions, ProcessTopology } from './select-train';
 export { selectTrain } from './select-train';
+
+export type {
+  AutoDesignNode,
+  AutoDesignNodeData,
+  AutoDesignEdge,
+  FlowsheetGraph,
+} from './build-graph';
+export { buildGraph, toFlowsheetNodeLites } from './build-graph';
