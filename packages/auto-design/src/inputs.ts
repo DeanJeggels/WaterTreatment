@@ -5,6 +5,7 @@
  * randomness, no AI.
  */
 import { SA_TYPICAL_INFLUENT, getDwaLimits, type DwaDischargeStandard } from '@repo/design-library';
+import type { MembraneModel, LandUse } from '@repo/sim-engine';
 
 /** MVP ships the MLE train; the rest are Phase 2 (kept for type-completeness). */
 export type PlantType = 'MLE' | 'MBR' | 'extended_aeration' | 'conventional_as';
@@ -102,5 +103,48 @@ export function defaultInputs(tier: DischargeTier = 'General'): DesignInputs {
       pRemoval: limits.TP !== undefined ? inf.TP > limits.TP : false,
       disinfection: true,
     },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// MLE-MBR design inputs (the redesigned form — the system is now MLE-MBR)
+// ---------------------------------------------------------------------------
+
+/** The small input set for the MLE-MBR design (everything else is derived). */
+export interface MleMbrInputs {
+  meta: ProjectMeta;
+  /** Average dry-weather flow, m³/d. */
+  adwfM3d: number;
+  /** Raw influent total COD, mg/L (all other influent quality is derived). */
+  codMgL: number;
+  tminC: number;
+  tmaxC: number;
+  elevationM: number;
+  nitrogenRemoval: boolean;
+  phosphorusRemoval: boolean;
+  dischargeStandard: DischargeTier;
+  mbrRequired: boolean;
+  membraneModel: MembraneModel;
+  landUse: LandUse;
+  /** Available site area, m² (for the plot layout). */
+  siteAreaM2: number;
+  siteBoundary?: Array<{ x: number; y: number }>;
+}
+
+export function defaultMleMbrInputs(): MleMbrInputs {
+  return {
+    meta: { projectName: '' },
+    adwfM3d: 70,
+    codMgL: 900,
+    tminC: 15,
+    tmaxC: 25,
+    elevationM: 1700,
+    nitrogenRemoval: true,
+    phosphorusRemoval: false,
+    dischargeStandard: 'Special',
+    mbrRequired: true,
+    membraneModel: 'megavision',
+    landUse: 'residential',
+    siteAreaM2: 5000,
   };
 }
