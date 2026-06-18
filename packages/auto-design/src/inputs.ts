@@ -92,7 +92,10 @@ export function defaultInputs(tier: DischargeTier = 'General'): DesignInputs {
     },
     dischargeStandard: tier,
     effluentTargets: limits,
-    siteAreaM2: 10000,
+    // ~3 ha — comfortably fits a preliminary MLE plant at the default flow; the
+    // plant is long+thin (~180 m), so an undersized square plot is the common
+    // cause of a 'site_area_exceeded' violation. Users set their real area.
+    siteAreaM2: 30000,
     plantType: 'MLE',
     // P-removal recommended when raw TP exceeds the discharge target.
     preferences: {

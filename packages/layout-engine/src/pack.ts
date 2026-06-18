@@ -37,8 +37,10 @@ function zoneFor(o: EngineeringObject): Placement['zone'] {
   }
 }
 
-/** Build a rectangular site boundary (2:1.5 plot) from an available area. */
-export function rectangularSite(areaM2: number, aspect = 1.5): SiteSpec {
+/** Build a rectangular site boundary from an available area. Default aspect is
+ *  wide (plants lay out linearly along the flow axis), so the plot is long enough
+ *  for the spine rather than near-square. */
+export function rectangularSite(areaM2: number, aspect = 2.5): SiteSpec {
   const widthM = Math.sqrt(areaM2 / aspect);
   const lengthM = areaM2 / widthM;
   return {
