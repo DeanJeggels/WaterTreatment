@@ -15,3 +15,6 @@ export { defaultInputs } from './inputs';
 
 export type { ValidationError, ValidationResult } from './validate';
 export { validateInputs } from './validate';
+
+export type { TrainOptions, ProcessTopology } from './select-train';
+export { selectTrain } from './select-train';
