@@ -12,3 +12,6 @@ export type {
   DesignInputs,
 } from './inputs';
 export { defaultInputs } from './inputs';
+
+export type { ValidationError, ValidationResult } from './validate';
+export { validateInputs } from './validate';
