@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@repo/object-model": "*",
-    "@repo/design-library": "*"
+    "@repo/design-library": "*",
+    "@repo/sim-engine": "*"
   }
 }
