@@ -1343,6 +1343,175 @@
             ],
             "additionalProperties": false
           },
+          "mechanical": {
+            "type": "object",
+            "properties": {
+              "equipmentId": {
+                "type": "string"
+              },
+              "vendor": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "dutyStandby": {
+                "type": "object",
+                "properties": {
+                  "duty": {
+                    "type": "number"
+                  },
+                  "standby": {
+                    "type": "number"
+                  },
+                  "configuration": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "duty",
+                  "standby",
+                  "configuration"
+                ],
+                "additionalProperties": false
+              },
+              "dimensionsMm": {
+                "type": "object",
+                "properties": {
+                  "lengthMm": {
+                    "type": "number"
+                  },
+                  "widthMm": {
+                    "type": "number"
+                  },
+                  "heightMm": {
+                    "type": "number"
+                  },
+                  "diameterMm": {
+                    "type": "number"
+                  },
+                  "wallThicknessMm": {
+                    "type": "number"
+                  },
+                  "weightKg": {
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "nozzles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "service": {
+                      "type": "string"
+                    },
+                    "sizeMm": {
+                      "type": "number"
+                    },
+                    "face": {
+                      "type": "string",
+                      "enum": [
+                        "upstream",
+                        "downstream",
+                        "top",
+                        "bottom",
+                        "side"
+                      ]
+                    },
+                    "elevationMm": {
+                      "type": "number"
+                    },
+                    "flangeStandard": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "service",
+                    "sizeMm",
+                    "face",
+                    "elevationMm",
+                    "flangeStandard"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "accessories": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "clearance": {
+                "type": "object",
+                "properties": {
+                  "N_mm": {
+                    "type": "number"
+                  },
+                  "S_mm": {
+                    "type": "number"
+                  },
+                  "E_mm": {
+                    "type": "number"
+                  },
+                  "W_mm": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "N_mm",
+                  "S_mm",
+                  "E_mm",
+                  "W_mm"
+                ],
+                "additionalProperties": false
+              },
+              "standardsCompliance": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "check": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pass",
+                        "warn",
+                        "fail"
+                      ]
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "check",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "equipmentId",
+              "vendor",
+              "model",
+              "dutyStandby",
+              "dimensionsMm",
+              "nozzles",
+              "accessories",
+              "clearance",
+              "standardsCompliance"
+            ],
+            "additionalProperties": false
+          },
           "ext": {
             "type": "object",
             "propertyNames": {

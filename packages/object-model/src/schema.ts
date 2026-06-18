@@ -198,6 +198,35 @@ const SPECIFIC_KIND_CLASSES: Partial<Record<ObjectParamsKind, ObjectClass[]>> = 
   dosing_skid: ['dosing_skid'],
 };
 
+const nozzleSchema = z.object({
+  id: z.string(),
+  service: z.string(),
+  sizeMm: z.number(),
+  face: z.enum(['upstream', 'downstream', 'top', 'bottom', 'side']),
+  elevationMm: z.number(),
+  flangeStandard: z.string(),
+});
+const maintenanceClearanceSchema = z.object({ N_mm: z.number(), S_mm: z.number(), E_mm: z.number(), W_mm: z.number() });
+const standardsCheckSchema = z.object({ check: z.string(), status: z.enum(['pass', 'warn', 'fail']), note: z.string().optional() });
+const mechanicalDetailSchema = z.object({
+  equipmentId: z.string(),
+  vendor: z.string(),
+  model: z.string(),
+  dutyStandby: z.object({ duty: z.number(), standby: z.number(), configuration: z.string() }),
+  dimensionsMm: z.object({
+    lengthMm: z.number().optional(),
+    widthMm: z.number().optional(),
+    heightMm: z.number().optional(),
+    diameterMm: z.number().optional(),
+    wallThicknessMm: z.number().optional(),
+    weightKg: z.number().optional(),
+  }),
+  nozzles: z.array(nozzleSchema),
+  accessories: z.array(z.string()),
+  clearance: maintenanceClearanceSchema,
+  standardsCompliance: z.array(standardsCheckSchema),
+});
+
 export const engineeringObjectSchema = z
   .object({
     schemaVersion: z.literal(SCHEMA_VERSION),
@@ -215,6 +244,7 @@ export const engineeringObjectSchema = z
     connections: z.array(objectConnectionSchema),
     designNotes: z.array(z.string()),
     sourceCalc: sourceCalcSchema.optional(),
+    mechanical: mechanicalDetailSchema.optional(),
     ext: z.record(z.string(), z.unknown()).optional(),
   })
   .superRefine((obj, ctx) => {
