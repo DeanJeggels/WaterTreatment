@@ -18,7 +18,9 @@ const XLSM_BASIS: MleMbrBasis = {
   mbrRequired: true,
   membraneModel: 'megavision',
   landUse: 'residential',
-  overrides: { mlssMgL: 10000, anoxicMassFraction: 0.25 },
+  // Pin influent ratios to the xlsm worked example (sample-derived, not the
+  // master's universal ratios) so the Marais-Ekama formulas stay validated.
+  overrides: { mlssMgL: 10000, anoxicMassFraction: 0.25, tknPerCod: 0.0778, tpPerCod: 0.0167, tssPerCod: 0.4 },
 };
 
 describe('designMleMbr — reproduces the WWTP Design.xlsm worked example', () => {
@@ -106,8 +108,22 @@ describe('designMleMbr — production defaults (spec)', () => {
     expect(d.reactor.volumeSelectedM3).toBeLessThan(50.2);
   });
 
-  it('NaOCl dosing per the spec formula (2 mg/L ÷ 150 g/L)', () => {
+  it('derives influent from the master universal ratios (TKN 0.075×COD, ISS 0.2×TSS)', () => {
+    expect(d.influent.TKN).toBeCloseTo(900 * 0.075, 0); // 67.5 (not the xlsm 70)
+    expect(d.influent.TSS).toBeCloseTo(900 * 0.45, 0); // 405
+    expect(d.influent.ISS).toBeCloseTo(d.influent.TSS * 0.2, 0);
+    expect(d.influent.BOD).toBeCloseTo(900 * 0.44, 0);
+  });
+
+  it('NaOCl dosing per the spec formula (2 mg/L ÷ 150 g/L) + hourly + storage', () => {
     expect(d.utilities.naoclLPerDay).toBeCloseTo((70 * 1000 * 2) / 150000, 2);
+    expect(d.utilities.naoclLPerHour).toBeCloseTo(d.utilities.naoclLPerDay / 24, 3);
+    expect(d.utilities.naoclStorageM3).toBeGreaterThan(0);
+  });
+
+  it('outputs CIP tank + sludge thickening silo (Stage 2 additions)', () => {
+    expect(d.mbr.cipTankM3).toBeGreaterThan(0);
+    expect(d.solids.thickeningSiloM3).toBeGreaterThan(0);
   });
 
   it('buffer/EQ tank = 0.5 × ADWF (12 h)', () => {

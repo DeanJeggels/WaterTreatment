@@ -6,7 +6,8 @@ import { runMleMbr } from '../src/mle-mbr-run';
 function inputs(): MleMbrInputs {
   const inp = defaultMleMbrInputs();
   inp.meta.projectName = 'Komani MBR';
-  inp.siteAreaM2 = 8000;
+  inp.footprintLengthM = 100;
+  inp.footprintWidthM = 80;
   return inp;
 }
 
