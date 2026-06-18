@@ -123,6 +123,23 @@ export async function runAndPersistMleMbr(
   );
   if (error) throw new Error(error.message);
 
+  // Carry client/location to the shared proposal_data (Proposal cover reads it).
+  const { data: fsRow } = await supabase.from('flowsheets').select('proposal_data').eq('id', flowsheetId).maybeSingle();
+  const existingProposal = (fsRow?.proposal_data ?? {}) as Record<string, unknown>;
+  const existingClient = (existingProposal.client ?? {}) as Record<string, unknown>;
+  await supabase
+    .from('flowsheets')
+    .update({
+      proposal_data: {
+        ...existingProposal,
+        client: {
+          ...existingClient,
+          ...(inputs.meta.client ? { name: inputs.meta.client } : {}),
+          ...(inputs.meta.siteLocation ? { location: inputs.meta.siteLocation } : {}),
+        },
+      },
+    })
+    .eq('id', flowsheetId);
   if (inputs.meta.projectName) {
     await supabase.from('projects').update({ name: inputs.meta.projectName }).eq('id', projectId);
   }
