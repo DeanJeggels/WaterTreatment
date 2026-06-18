@@ -9,6 +9,7 @@ import { designMleMbr, type MleMbrBasis, type MleMbrDesign } from '@repo/sim-eng
 import { getDwaLimits } from '@repo/design-library';
 import {
   instantiateMleMbr,
+  applyMechanicalDetail,
   siteLocalCoordinateSystem,
   parseDesignPackage,
   type DesignPackage,
@@ -51,7 +52,12 @@ function toBasis(input: MleMbrInputs): MleMbrBasis {
 
 export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunResult {
   const design = designMleMbr(toBasis(input));
-  const objects = instantiateMleMbr(design, { flowsheetId: meta.flowsheetId });
+  // Stage 3: enrich with mechanical detail (nozzles, accessories, clearances, duty/standby).
+  const objects = applyMechanicalDetail(
+    instantiateMleMbr(design, { flowsheetId: meta.flowsheetId }),
+    design,
+    { maintenanceAccess: input.maintenanceAccess },
+  );
 
   // The MBR cassette lives INSIDE the aeration tank — keep it out of the plot
   // packing, then snap it to the parent's footprint after layout.

@@ -23,6 +23,10 @@ export type {
   ObjectParams,
   ObjectParamsKind,
   EngineeringObject,
+  Nozzle,
+  MaintenanceClearance,
+  StandardsCheck,
+  MechanicalDetail,
   Dimension,
   CalculationRecord,
   UnitType,
@@ -42,6 +46,9 @@ export type { MaterialiserNode, MaterialiserEdge, MaterialiseOptions } from './m
 
 export { instantiateMleMbr } from './mle-mbr-objects';
 export type { MleMbrInstantiateOptions } from './mle-mbr-objects';
+
+export { applyMechanicalDetail, pipeSizeMm } from './mechanical-detail';
+export type { MechanicalDetailOptions } from './mechanical-detail';
 
 export type {
   Point2D,

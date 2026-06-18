@@ -4,9 +4,9 @@ import type { MleMbrDesign } from '@repo/sim-engine';
 import type { DesignPackage } from '@repo/object-model';
 
 /**
- * MLE-MBR preliminary design report (T: redesign) — the 10-section document from
- * the spec, print-only (`hidden print:block`), rendered VERBATIM from the
- * persisted design (pkg.mleMbr). window.print() targets it.
+ * MLE-MBR preliminary design report — the master-spec document (Stages 2–7,
+ * incl. the tagged equipment list), print-only (`hidden print:block`), rendered
+ * VERBATIM from the persisted design (pkg.mleMbr) + objects. window.print() targets it.
  */
 function Section({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
@@ -113,7 +113,16 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         ]} />
       </Section>
 
-      <Section n={7} title="Tank sizing (two layout options)">
+      <Section n={7} title="Equipment list (tagged)">
+        <T head={['ID', 'Tag', 'Description', 'Duty/standby', 'L×W×H mm', 'Weight kg', 'Vendor']} rows={pkg.objects.filter((o) => o.mechanical).map((o) => {
+          const m = o.mechanical!;
+          const dm = m.dimensionsMm;
+          return [m.equipmentId, o.tag, o.label, m.dutyStandby.configuration, `${dm.lengthMm ?? '—'}×${dm.widthMm ?? '—'}×${dm.heightMm ?? '—'}`, dm.weightKg ?? '—', m.vendor];
+        })} />
+        <p className="mt-2 text-[10px] text-gray-500">Full nozzle schedules, accessories and maintenance clearances per item are in the design data model (Appendix / JSON export). Vendor/model are indicative pending procurement.</p>
+      </Section>
+
+      <Section n={8} title="Tank sizing (two layout options)">
         <T head={['Tank', 'Vol m³', 'Option A (square)', 'Option B (2:1)']} rows={d.tanks.map((t) => [
           t.name, t.volumeM3,
           `${t.options[0].lengthM}×${t.options[0].widthM}×${t.options[0].depthM} m`,
@@ -121,12 +130,12 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         ])} />
       </Section>
 
-      <Section n={8} title="Solids handling">
+      <Section n={9} title="Solids handling">
         <p className="mb-2 text-xs">Waste activated sludge is drawn directly from the membrane tank at MLSS concentration; recommended thickening: {d.solids.thickening}; dewatering: {d.solids.dewatering}.</p>
         <T head={['Parameter', 'Value', 'Unit']} rows={[['WAS rate', d.solids.wasM3d, 'm³/d'], ['WAS TSS', d.solids.wasTssMgL.toLocaleString(), 'mg/L'], ['WAS VSS', d.solids.wasVssMgL.toLocaleString(), 'mg/L'], ['Thickening silo volume', d.solids.thickeningSiloM3, 'm³']]} />
       </Section>
 
-      <Section n={9} title="Utilities summary">
+      <Section n={10} title="Utilities summary">
         <T head={['Parameter', 'Value', 'Unit']} rows={[
           ['Installed power', d.utilities.installedKW, 'kW'],
           ['Duty power', d.utilities.dutyKW, 'kW'],
@@ -139,7 +148,7 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         ]} />
       </Section>
 
-      <Section n={10} title="Design summary">
+      <Section n={11} title="Design summary">
         <T head={['Parameter', 'Value', 'Unit']} rows={[
           ['Process', d.process.config + (d.mbr.included ? ' + MBR' : ''), ''],
           ['ADWF', d.flows.adwf, 'm³/d'],
