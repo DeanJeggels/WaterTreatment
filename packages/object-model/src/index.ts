@@ -71,3 +71,5 @@ export {
   parseDesignPackage,
   safeParseDesignPackage,
 } from './schema';
+
+export { designPackageJSONSchema } from './json-schema';
