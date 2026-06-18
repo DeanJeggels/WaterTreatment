@@ -3,10 +3,11 @@
 import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Wand2 } from 'lucide-react';
+import type { DesignInputs } from '@repo/auto-design';
 import { ProjectEditorTabs } from '@/components/layout/project-editor-tabs';
 import { PageShell } from '@/components/layout/page-shell';
 import { useProjectStore } from '@/stores/project-store';
+import { DesignWizard } from './_components/design-wizard';
 
 /**
  * AquaSim v3 — Design tab (Phase 0 stub).
@@ -39,18 +40,22 @@ export default function DesignPage() {
         </div>
       </header>
 
-      <main className="container mx-auto max-w-2xl px-6 py-16">
-        <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-border p-12 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent">
-            <Wand2 className="h-6 w-6 text-accent-foreground" />
-          </div>
-          <h1 className="text-lg font-semibold">Design — coming soon</h1>
-          <p className="max-w-md text-sm text-muted-foreground">
-            Enter your project inputs once and AquaSim will generate a preliminary engineering design
-            package: sized units, a placed 2D plant layout, a compliance verdict, and downloadable
-            JSON / PDF / Excel where every number traces back to a cited calculation.
+      <main className="container mx-auto max-w-3xl px-6 py-8">
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold">Guided design</h1>
+          <p className="text-sm text-muted-foreground">
+            Enter your inputs once. AquaSim sizes the plant, places a 2D layout, and produces a
+            compliance verdict and downloadable package — every number traceable to a calculation.
           </p>
         </div>
+        <DesignWizard
+          initialName={projectName}
+          onSubmit={(inputs: DesignInputs) => {
+            // T1.3: UI only — round-trip the collected inputs. Persistence is wired in T1.4.
+            // eslint-disable-next-line no-console
+            console.log('DesignInputs', inputs);
+          }}
+        />
       </main>
     </PageShell>
   );
