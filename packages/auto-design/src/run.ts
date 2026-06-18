@@ -13,6 +13,7 @@ import {
   type WaterQuality,
   type DischargeStandards,
 } from '@repo/sim-engine';
+import { instantiateObjects, type EngineeringObject } from '@repo/object-model';
 import type { DesignInputs } from './inputs';
 import { validateInputs, type ValidationError } from './validate';
 import { selectTrain, type ProcessTopology } from './select-train';
@@ -38,6 +39,12 @@ export interface AutoDesignRunResult {
   results: SimulationResults;
   boq: AggregatedBoQ;
   compliance: ComplianceResult;
+  objects: EngineeringObject[];
+}
+
+export interface RunOptions {
+  /** Stamped into every object's sourceCalc (the canvas/flowsheet this came from). */
+  flowsheetId?: string;
 }
 
 function toDischargeStandards(input: DesignInputs): DischargeStandards {
@@ -66,7 +73,9 @@ function effluentQuality(graph: FlowsheetGraph, results: SimulationResults): Wat
  * Stages 1–5: validate -> selectTrain -> buildGraph -> simulate -> aggregateBoQ
  * + checkCompliance. Throws AutoDesignValidationError on invalid inputs.
  */
-export function runAutoDesign(input: DesignInputs): AutoDesignRunResult {
+export function runAutoDesign(input: DesignInputs, opts: RunOptions = {}): AutoDesignRunResult {
+  const flowsheetId = opts.flowsheetId ?? 'unassigned';
+
   // [1] validate
   const validation = validateInputs(input);
   if (!validation.valid) throw new AutoDesignValidationError(validation.errors);
@@ -92,6 +101,19 @@ export function runAutoDesign(input: DesignInputs): AutoDesignRunResult {
   const perParameter = effluent ? checkCompliance(effluent, standards) : {};
   const pass = Object.values(perParameter).every((p) => p.pass);
 
+  // [6] instantiate spatial objects — REUSED @repo/object-model materialiser
+  const objects = instantiateObjects(
+    graph.nodes.map((n) => ({ id: n.id, unitType: n.data.unitType, parameters: n.data.parameters })),
+    graph.edges.map((e) => ({
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle,
+    })),
+    results,
+    { flowsheetId },
+  );
+
   return {
     inputs: input,
     topology,
@@ -99,5 +121,6 @@ export function runAutoDesign(input: DesignInputs): AutoDesignRunResult {
     results,
     boq,
     compliance: { standard: input.dischargeStandard, pass, perParameter },
+    objects,
   };
 }
