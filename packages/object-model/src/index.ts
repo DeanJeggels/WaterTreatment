@@ -40,6 +40,9 @@ export { materialFor } from './materials';
 export { instantiateObjects } from './materialise';
 export type { MaterialiserNode, MaterialiserEdge, MaterialiseOptions } from './materialise';
 
+export { instantiateMleMbr } from './mle-mbr-objects';
+export type { MleMbrInstantiateOptions } from './mle-mbr-objects';
+
 export type {
   Point2D,
   Corridor,
