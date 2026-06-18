@@ -5,17 +5,17 @@ import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import type { DesignInputs } from '@repo/auto-design';
+import type { MleMbrInputs } from '@repo/auto-design';
 import type { DesignPackage } from '@repo/object-model';
 import { ProjectEditorTabs } from '@/components/layout/project-editor-tabs';
 import { PageShell } from '@/components/layout/page-shell';
 import { Button } from '@/components/ui/button';
 import { useProjectStore } from '@/stores/project-store';
-import { runAndPersistDesign, loadDesignPackage, loadProjectMeta } from '@/lib/design/run-auto-design';
-import { DesignWizard } from './_components/design-wizard';
+import { runAndPersistMleMbr, loadDesignPackage, loadProjectMeta } from '@/lib/design/run-auto-design';
+import { MleMbrWizard } from './_components/mle-mbr-wizard';
 import { LayoutSvg } from './_components/layout-svg';
 import { DesignSummary } from './_components/design-summary';
-import { DesignReport } from './_components/design-report';
+import { MleMbrReport } from './_components/mle-mbr-report';
 
 // Three.js touches window — load only on the client.
 const PlantViewer3D = dynamic(
@@ -45,12 +45,12 @@ export default function DesignPage() {
       .finally(() => setReady(true));
   }, [params.id, params.flowsheetId, setProject, loadFlowsheet]);
 
-  async function handleSubmit(inputs: DesignInputs) {
+  async function handleSubmit(inputs: MleMbrInputs) {
     setSubmitting(true);
     try {
-      const result = await runAndPersistDesign(params.id, params.flowsheetId, inputs);
+      const result = await runAndPersistMleMbr(params.id, params.flowsheetId, inputs);
       setPkg(result);
-      toast.success(result.compliance.pass ? 'Design generated — compliant' : 'Design generated — review compliance');
+      toast.success(result.compliance.pass ? 'MLE-MBR design generated — compliant' : 'Design generated — review compliance');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to generate design');
     } finally {
@@ -114,19 +114,19 @@ export default function DesignPage() {
               )}
               <DesignSummary pkg={pkg} />
             </div>
-            {/* Print-only full design report (T6.4) — the PDF target. */}
-            <DesignReport pkg={pkg} />
+            {/* Print-only 10-section MLE-MBR report — the PDF target. */}
+            <MleMbrReport pkg={pkg} />
           </>
         ) : (
           <div className="space-y-6">
             <div>
-              <h1 className="text-xl font-semibold">Guided design</h1>
+              <h1 className="text-xl font-semibold">MLE-MBR preliminary design</h1>
               <p className="text-sm text-muted-foreground">
-                Enter your inputs once. AquaSim sizes the plant, places a 2D layout, and produces a compliance
-                verdict and downloadable package.
+                Enter the design basis once. AquaSim derives the influent, sizes the bioreactor, MBR, blowers and
+                disinfection, places the plant, and produces a full preliminary design report.
               </p>
             </div>
-            <DesignWizard
+            <MleMbrWizard
               initialName={projectName}
               initialClient={meta.client}
               initialLocation={meta.siteLocation}
