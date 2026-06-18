@@ -20,6 +20,8 @@
   },
   "dependencies": {
     "@repo/auto-design": "*",
-    "@repo/sim-engine": "*"
+    "@repo/object-model": "*",
+    "@repo/sim-engine": "*",
+    "xlsx": "^0.18.5"
   }
 }
