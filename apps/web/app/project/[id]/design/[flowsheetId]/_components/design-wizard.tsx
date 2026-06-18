@@ -20,6 +20,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
  */
 interface Props {
   initialName?: string;
+  initialClient?: string;
+  initialLocation?: string;
   onSubmit: (inputs: DesignInputs) => void | Promise<void>;
   submitting?: boolean;
 }
@@ -32,10 +34,12 @@ const STEPS: { id: StepId; title: string }[] = [
   { id: 'review', title: 'Review' },
 ];
 
-export function DesignWizard({ initialName, onSubmit, submitting }: Props) {
+export function DesignWizard({ initialName, initialClient, initialLocation, onSubmit, submitting }: Props) {
   const [inputs, setInputs] = useState<DesignInputs>(() => {
     const base = defaultInputs('General');
     if (initialName) base.meta.projectName = initialName;
+    if (initialClient) base.meta.client = initialClient;
+    if (initialLocation) base.meta.siteLocation = initialLocation;
     return base;
   });
   const [stepIndex, setStepIndex] = useState(0);

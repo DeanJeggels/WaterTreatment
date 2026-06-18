@@ -60,4 +60,22 @@ test.describe('AquaSim v3 guided design (authenticated)', () => {
     await expect(page.getByRole('heading', { name: /compliance/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /JSON/i })).toBeVisible();
   });
+
+  test('client name entered in the wizard carries over to the Proposal tab', async ({ page }) => {
+    await page.goto('/project/new');
+    await page.getByLabel(/project name/i).fill('E2E Carryover');
+    await page.getByRole('button', { name: /guided design/i }).click();
+    await page.getByRole('button', { name: /create project/i }).click();
+    await page.waitForURL(/\/design\//);
+
+    await page.getByLabel(/^client/i).fill('Enoch Mgijima LM');
+    await page.getByRole('button', { name: /review/i }).click();
+    await page.getByRole('button', { name: /generate design/i }).click();
+    await expect(page.getByRole('img', { name: /plant layout/i })).toBeVisible({ timeout: 20_000 });
+
+    // Navigate to the Proposal tab — the client name must already be there.
+    await page.getByRole('link', { name: /proposal/i }).click();
+    await page.waitForURL(/\/proposal\//);
+    await expect(page.getByText('Enoch Mgijima LM')).toBeVisible({ timeout: 15_000 });
+  });
 });
