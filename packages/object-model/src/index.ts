@@ -31,6 +31,9 @@ export type {
 export { siteLocalCoordinateSystem } from './coordinate-system';
 export type { CoordinateSystem } from './coordinate-system';
 
+export { deriveGeometry } from './dimension-deriver';
+export type { DerivedGeometry } from './dimension-deriver';
+
 export type {
   Point2D,
   Corridor,
