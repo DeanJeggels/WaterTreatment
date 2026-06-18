@@ -1,5 +1,7 @@
 'use client';
 
+import { Download, FileSpreadsheet, Printer } from 'lucide-react';
+import { toJSON, toExcel } from '@repo/export-kit';
 import type { DesignPackage, EngineeringObject } from '@repo/object-model';
 import {
   Table,
@@ -10,18 +12,101 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 /**
- * DesignSummary (T6.3) — sized-unit table + compliance verdict + totals. Reads
- * the persisted DesignPackage VERBATIM; computes nothing engineering.
+ * DesignSummary (T6.3) — sized-unit table + compliance verdict + totals, plus
+ * JSON/Excel/PDF exports (T6.2/T6.4/T6.6). Reads the persisted DesignPackage
+ * VERBATIM; computes nothing engineering. Exports are projections of the SAME
+ * package, so they can never disagree.
  */
 export function DesignSummary({ pkg }: { pkg: DesignPackage }) {
   return (
     <div className="space-y-6">
+      <ExportBar pkg={pkg} />
       <Totals pkg={pkg} />
       <Compliance pkg={pkg} />
       <UnitTable objects={pkg.objects} />
+      <CalculationTrail pkg={pkg} />
     </div>
+  );
+}
+
+function download(filename: string, blob: Blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function ExportBar({ pkg }: { pkg: DesignPackage }) {
+  const base = `${pkg.meta.projectName || 'design'}-${pkg.meta.plantType}`.replace(/\s+/g, '_');
+  return (
+    <div className="flex flex-wrap gap-2 print:hidden">
+      {/* T6.2 — JSON: the canonical, persisted package */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => download(`${base}.json`, new Blob([toJSON(pkg)], { type: 'application/json' }))}
+      >
+        <Download className="mr-1.5 h-4 w-4" /> JSON
+      </Button>
+      {/* T6.6 — Excel */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          download(
+            `${base}.xlsx`,
+            new Blob([toExcel(pkg) as BlobPart], {
+              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            }),
+          )
+        }
+      >
+        <FileSpreadsheet className="mr-1.5 h-4 w-4" /> Excel
+      </Button>
+      {/* T6.4 — PDF via the browser print path (no server-side dep) */}
+      <Button variant="outline" size="sm" onClick={() => window.print()}>
+        <Printer className="mr-1.5 h-4 w-4" /> PDF
+      </Button>
+    </div>
+  );
+}
+
+function CalculationTrail({ pkg }: { pkg: DesignPackage }) {
+  const records = pkg.provenance.calculations;
+  if (records.length === 0) return null;
+  return (
+    <details className="rounded-md border border-border p-4 print:open" open={false}>
+      <summary className="cursor-pointer text-sm font-semibold">Calculation trail ({records.length} records)</summary>
+      <div className="mt-3 overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Quantity</TableHead>
+              <TableHead>Equation</TableHead>
+              <TableHead>Result</TableHead>
+              <TableHead>Citation</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {records.map((r, i) => (
+              <TableRow key={i}>
+                <TableCell className="text-xs">{r.label}</TableCell>
+                <TableCell className="font-mono text-xs">{r.equation}</TableCell>
+                <TableCell className="text-xs">
+                  {r.result.value} {r.result.unit}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">{r.citation}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </details>
   );
 }
 
