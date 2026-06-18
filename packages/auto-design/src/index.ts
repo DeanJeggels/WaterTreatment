@@ -10,8 +10,12 @@ export type {
   InfluentQuality,
   DesignPreferences,
   DesignInputs,
+  MleMbrInputs,
 } from './inputs';
-export { defaultInputs } from './inputs';
+export { defaultInputs, defaultMleMbrInputs } from './inputs';
+
+export type { MleMbrRunMeta, MleMbrRunResult } from './mle-mbr-run';
+export { runMleMbr } from './mle-mbr-run';
 
 export type { ValidationError, ValidationResult } from './validate';
 export { validateInputs } from './validate';
