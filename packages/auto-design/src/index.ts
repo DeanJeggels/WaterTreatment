@@ -26,3 +26,6 @@ export type {
   FlowsheetGraph,
 } from './build-graph';
 export { buildGraph, toFlowsheetNodeLites } from './build-graph';
+
+export type { ComplianceResult, AutoDesignRunResult } from './run';
+export { runAutoDesign, AutoDesignValidationError } from './run';

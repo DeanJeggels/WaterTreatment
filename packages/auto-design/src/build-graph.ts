@@ -12,18 +12,20 @@ import type { FlowsheetNodeLite } from '@repo/sim-engine';
 import type { DesignInputs } from './inputs';
 import type { ProcessTopology } from './select-train';
 
-export interface AutoDesignNodeData {
+// Type aliases (not interfaces) so `data` carries an implicit index signature and
+// the nodes are assignable to sim-engine's GraphNode (data: Record<string,unknown>).
+export type AutoDesignNodeData = {
   unitType: UnitType;
   label: string;
   parameters: Record<string, number>;
   position: { x: number; y: number };
-}
+};
 
-export interface AutoDesignNode {
+export type AutoDesignNode = {
   id: string;
   type: UnitType;
   data: AutoDesignNodeData;
-}
+};
 
 export interface AutoDesignEdge {
   id: string;
