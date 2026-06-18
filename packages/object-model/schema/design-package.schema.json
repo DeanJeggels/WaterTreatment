@@ -1779,6 +1779,13 @@
         "layoutRules"
       ],
       "additionalProperties": false
+    },
+    "mleMbr": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
     }
   },
   "required": [
