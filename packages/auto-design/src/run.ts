@@ -1,0 +1,135 @@
+/**
+ * runAutoDesign — the orchestration spine (stages 1–5 here; objects + layout +
+ * assemble are wired in later phases). Every engineering number comes from
+ * @repo/sim-engine; this file only sequences and shapes them. Pure, deterministic
+ * (same DesignInputs -> byte-identical results), no LLM, no network.
+ */
+import {
+  simulate,
+  aggregateBoQ,
+  checkCompliance,
+  type SimulationResults,
+  type AggregatedBoQ,
+  type WaterQuality,
+  type DischargeStandards,
+} from '@repo/sim-engine';
+import { instantiateObjects, type EngineeringObject, type PlantLayout } from '@repo/object-model';
+import { layout, rectangularSite } from '@repo/layout-engine';
+import type { DesignInputs } from './inputs';
+import { validateInputs, type ValidationError } from './validate';
+import { selectTrain, type ProcessTopology } from './select-train';
+import { buildGraph, toFlowsheetNodeLites, type FlowsheetGraph } from './build-graph';
+
+export class AutoDesignValidationError extends Error {
+  constructor(public readonly errors: ValidationError[]) {
+    super(`Invalid design inputs: ${errors.map((e) => `${e.field}: ${e.message}`).join('; ')}`);
+    this.name = 'AutoDesignValidationError';
+  }
+}
+
+export interface ComplianceResult {
+  standard: string;
+  pass: boolean;
+  perParameter: Record<string, { value: number; limit: number; pass: boolean }>;
+}
+
+export interface AutoDesignRunResult {
+  inputs: DesignInputs;
+  topology: ProcessTopology;
+  graph: FlowsheetGraph;
+  results: SimulationResults;
+  boq: AggregatedBoQ;
+  compliance: ComplianceResult;
+  objects: EngineeringObject[];
+  layout: PlantLayout;
+}
+
+export interface RunOptions {
+  /** Stamped into every object's sourceCalc (the canvas/flowsheet this came from). */
+  flowsheetId?: string;
+}
+
+function toDischargeStandards(input: DesignInputs): DischargeStandards {
+  const t = input.effluentTargets;
+  return {
+    COD: t.COD,
+    BOD5: t.BOD5,
+    NH3N: t.NH3N,
+    NO3N: t.NO3N,
+    TSS: t.TSS,
+    TP: t.TP,
+    pH_min: t.pH_min,
+    pH_max: t.pH_max,
+  };
+}
+
+/** The effluent quality is the water on the edge feeding the effluent node. */
+function effluentQuality(graph: FlowsheetGraph, results: SimulationResults): WaterQuality | undefined {
+  const effluentNode = graph.nodes.find((n) => n.data.unitType === 'effluent');
+  if (!effluentNode) return undefined;
+  const inboundEdge = graph.edges.find((e) => e.target === effluentNode.id);
+  return inboundEdge ? results.edgeResults[inboundEdge.id] : undefined;
+}
+
+/**
+ * Stages 1–5: validate -> selectTrain -> buildGraph -> simulate -> aggregateBoQ
+ * + checkCompliance. Throws AutoDesignValidationError on invalid inputs.
+ */
+export function runAutoDesign(input: DesignInputs, opts: RunOptions = {}): AutoDesignRunResult {
+  const flowsheetId = opts.flowsheetId ?? 'unassigned';
+
+  // [1] validate
+  const validation = validateInputs(input);
+  if (!validation.valid) throw new AutoDesignValidationError(validation.errors);
+
+  // [2] select train
+  const topology = selectTrain({
+    plantType: input.plantType,
+    pRemoval: input.preferences.pRemoval,
+    disinfection: input.preferences.disinfection,
+  });
+
+  // [3] build graph
+  const graph = buildGraph(topology, input);
+
+  // [4] simulate — REUSED sim-engine, THE MATH
+  const results = simulate(graph.nodes, graph.edges);
+
+  // [5] BoQ + compliance — REUSED
+  const boq = aggregateBoQ(toFlowsheetNodeLites(graph), results.nodeResults);
+
+  const standards = toDischargeStandards(input);
+  const effluent = effluentQuality(graph, results);
+  const perParameter = effluent ? checkCompliance(effluent, standards) : {};
+  const pass = Object.values(perParameter).every((p) => p.pass);
+
+  // [6] instantiate spatial objects — REUSED @repo/object-model materialiser
+  const objects = instantiateObjects(
+    graph.nodes.map((n) => ({ id: n.id, unitType: n.data.unitType, parameters: n.data.parameters })),
+    graph.edges.map((e) => ({
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle,
+    })),
+    results,
+    { flowsheetId },
+  );
+
+  // [7] rule-based 2D layout — writes placement back onto objects
+  const site = input.siteBoundary?.length
+    ? { boundary: input.siteBoundary }
+    : rectangularSite(input.siteAreaM2);
+  const plantLayout = layout(objects, site);
+
+  return {
+    inputs: input,
+    topology,
+    graph,
+    results,
+    boq,
+    compliance: { standard: input.dischargeStandard, pass, perParameter },
+    objects,
+    layout: plantLayout,
+  };
+}

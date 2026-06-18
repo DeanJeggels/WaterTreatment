@@ -6,3 +6,5 @@ export type { KineticConstants } from './kinetic-constants';
 export { KINETIC_CONSTANTS, adjustForTemperature } from './kinetic-constants';
 export type { TypicalInfluent } from './defaults';
 export { SA_TYPICAL_INFLUENT } from './defaults';
+export type { LayoutRules } from './layout-rules';
+export { LAYOUT_RULES } from './layout-rules';

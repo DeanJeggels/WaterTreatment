@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowLeft, FileText, LayoutTemplate } from 'lucide-react';
+import { Loader2, ArrowLeft, FileText, LayoutTemplate, LayoutGrid, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface Template {
@@ -26,6 +26,9 @@ export default function NewProjectPage() {
   const [error, setError] = useState('');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  // 'blank' = the existing manual-canvas flow (default, unchanged).
+  // 'guided' = AquaSim v3 input-form -> auto-design package (routes to the Design tab).
+  const [mode, setMode] = useState<'blank' | 'guided'>('blank');
 
   useEffect(() => {
     async function loadTemplates() {
@@ -88,7 +91,11 @@ export default function NewProjectPage() {
       return;
     }
 
-    router.push(`/project/${project.id}/flowsheet/${flowsheet.id}`);
+    if (mode === 'guided') {
+      router.push(`/project/${project.id}/design/${flowsheet.id}`);
+    } else {
+      router.push(`/project/${project.id}/flowsheet/${flowsheet.id}`);
+    }
   }
 
   return (
@@ -130,7 +137,46 @@ export default function NewProjectPage() {
             </CardContent>
           </Card>
 
-          {/* Template selection */}
+          {/* Design mode: Guided (v3 wizard) vs Blank (manual canvas) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">How do you want to start?</CardTitle>
+              <CardDescription>Generate a design from inputs, or build the flowsheet by hand</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMode('guided')}
+                  aria-pressed={mode === 'guided'}
+                  className={`text-left p-4 rounded-lg border-2 transition-colors ${
+                    mode === 'guided' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <Wand2 className="h-5 w-5 text-primary mb-2" />
+                  <p className="font-medium text-sm">Guided design</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter inputs once, get a sized preliminary design package
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('blank')}
+                  aria-pressed={mode === 'blank'}
+                  className={`text-left p-4 rounded-lg border-2 transition-colors ${
+                    mode === 'blank' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <LayoutGrid className="h-5 w-5 text-muted-foreground mb-2" />
+                  <p className="font-medium text-sm">Blank / manual</p>
+                  <p className="text-xs text-muted-foreground mt-1">Build the flowsheet yourself on the canvas</p>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Template selection (manual mode only) */}
+          {mode === 'blank' && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Start From</CardTitle>
@@ -173,6 +219,7 @@ export default function NewProjectPage() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
