@@ -11,7 +11,6 @@ import {
 } from '@repo/auto-design';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 /**
@@ -21,6 +20,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
  */
 interface Props {
   initialName?: string;
+  initialClient?: string;
+  initialLocation?: string;
   onSubmit: (inputs: DesignInputs) => void | Promise<void>;
   submitting?: boolean;
 }
@@ -33,10 +34,12 @@ const STEPS: { id: StepId; title: string }[] = [
   { id: 'review', title: 'Review' },
 ];
 
-export function DesignWizard({ initialName, onSubmit, submitting }: Props) {
+export function DesignWizard({ initialName, initialClient, initialLocation, onSubmit, submitting }: Props) {
   const [inputs, setInputs] = useState<DesignInputs>(() => {
     const base = defaultInputs('General');
     if (initialName) base.meta.projectName = initialName;
+    if (initialClient) base.meta.client = initialClient;
+    if (initialLocation) base.meta.siteLocation = initialLocation;
     return base;
   });
   const [stepIndex, setStepIndex] = useState(0);
@@ -274,12 +277,13 @@ function Field({
   className?: string;
   children: React.ReactNode;
 }) {
+  // Native <label> wrapping the control => implicit association (a11y + getByLabel).
   return (
-    <div className={`space-y-1.5 ${className ?? ''}`}>
-      <Label>{label}</Label>
+    <label className={`block space-y-1.5 ${className ?? ''}`}>
+      <span className="text-sm font-medium leading-none">{label}</span>
       {children}
       {error?.length ? <p className="text-xs text-destructive">{error[0]}</p> : null}
-    </div>
+    </label>
   );
 }
 

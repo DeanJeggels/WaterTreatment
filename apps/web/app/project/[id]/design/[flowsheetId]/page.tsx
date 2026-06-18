@@ -10,7 +10,7 @@ import { ProjectEditorTabs } from '@/components/layout/project-editor-tabs';
 import { PageShell } from '@/components/layout/page-shell';
 import { Button } from '@/components/ui/button';
 import { useProjectStore } from '@/stores/project-store';
-import { runAndPersistDesign, loadDesignPackage } from '@/lib/design/run-auto-design';
+import { runAndPersistDesign, loadDesignPackage, loadProjectMeta } from '@/lib/design/run-auto-design';
 import { DesignWizard } from './_components/design-wizard';
 import { LayoutSvg } from './_components/layout-svg';
 import { DesignSummary } from './_components/design-summary';
@@ -20,11 +20,20 @@ export default function DesignPage() {
   const { projectName, flowsheetName, setProject, loadFlowsheet } = useProjectStore();
   const [submitting, setSubmitting] = useState(false);
   const [pkg, setPkg] = useState<DesignPackage | null>(null);
+  const [meta, setMeta] = useState<{ client?: string; siteLocation?: string }>({});
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     setProject(params.id, params.flowsheetId);
     loadFlowsheet();
-    loadDesignPackage(params.flowsheetId).then((p) => p && setPkg(p));
+    // Resolve a saved package and the shared project meta before deciding what to
+    // render, so the wizard pre-fills (client/location carried from the Proposal).
+    Promise.all([loadDesignPackage(params.flowsheetId), loadProjectMeta(params.flowsheetId)])
+      .then(([p, m]) => {
+        if (p) setPkg(p);
+        setMeta(m);
+      })
+      .finally(() => setReady(true));
   }, [params.id, params.flowsheetId, setProject, loadFlowsheet]);
 
   async function handleSubmit(inputs: DesignInputs) {
@@ -61,7 +70,9 @@ export default function DesignPage() {
       </header>
 
       <main className="container mx-auto max-w-4xl px-6 py-8">
-        {pkg ? (
+        {!ready ? (
+          <div className="text-sm text-muted-foreground">Loading…</div>
+        ) : pkg ? (
           <div className="space-y-6">
             <div>
               <h1 className="text-xl font-semibold">Plant layout</h1>
@@ -81,7 +92,13 @@ export default function DesignPage() {
                 verdict and downloadable package.
               </p>
             </div>
-            <DesignWizard initialName={projectName} onSubmit={handleSubmit} submitting={submitting} />
+            <DesignWizard
+              initialName={projectName}
+              initialClient={meta.client}
+              initialLocation={meta.siteLocation}
+              onSubmit={handleSubmit}
+              submitting={submitting}
+            />
           </div>
         )}
       </main>
