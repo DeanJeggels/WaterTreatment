@@ -34,6 +34,9 @@ export type { CoordinateSystem } from './coordinate-system';
 export { deriveGeometry } from './dimension-deriver';
 export type { DerivedGeometry } from './dimension-deriver';
 
+export { allocateTag, processAreaFor } from './tags';
+export { materialFor } from './materials';
+
 export type {
   Point2D,
   Corridor,
