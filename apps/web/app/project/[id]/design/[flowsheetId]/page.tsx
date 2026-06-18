@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -14,6 +15,13 @@ import { runAndPersistDesign, loadDesignPackage, loadProjectMeta } from '@/lib/d
 import { DesignWizard } from './_components/design-wizard';
 import { LayoutSvg } from './_components/layout-svg';
 import { DesignSummary } from './_components/design-summary';
+import { DesignReport } from './_components/design-report';
+
+// Three.js touches window — load only on the client.
+const PlantViewer3D = dynamic(
+  () => import('./_components/plant-viewer-3d').then((m) => m.PlantViewer3D),
+  { ssr: false, loading: () => <div className="h-[520px] rounded-md border border-border bg-[#0a0d12]" /> },
+);
 
 export default function DesignPage() {
   const params = useParams<{ id: string; flowsheetId: string }>();
@@ -22,6 +30,7 @@ export default function DesignPage() {
   const [pkg, setPkg] = useState<DesignPackage | null>(null);
   const [meta, setMeta] = useState<{ client?: string; siteLocation?: string }>({});
   const [ready, setReady] = useState(false);
+  const [view, setView] = useState<'2d' | '3d'>('2d');
 
   useEffect(() => {
     setProject(params.id, params.flowsheetId);
@@ -73,16 +82,41 @@ export default function DesignPage() {
         {!ready ? (
           <div className="text-sm text-muted-foreground">Loading…</div>
         ) : pkg ? (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-xl font-semibold">Plant layout</h1>
-              <p className="text-sm text-muted-foreground">
-                {pkg.meta.plantType} train · {pkg.objects.length} units · every number traces to a calculation.
-              </p>
+          <>
+            {/* On-screen interactive viewer (hidden when printing). */}
+            <div className="space-y-6 print:hidden">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <h1 className="text-xl font-semibold">Plant layout</h1>
+                  <p className="text-sm text-muted-foreground">
+                    {pkg.meta.plantType} train · {pkg.objects.length} units · every number traces to a calculation.
+                  </p>
+                </div>
+                <div className="flex rounded-md border border-border p-0.5 text-sm">
+                  <button
+                    onClick={() => setView('2d')}
+                    className={`rounded px-3 py-1 ${view === '2d' ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'}`}
+                  >
+                    2D plan
+                  </button>
+                  <button
+                    onClick={() => setView('3d')}
+                    className={`rounded px-3 py-1 ${view === '3d' ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'}`}
+                  >
+                    3D
+                  </button>
+                </div>
+              </div>
+              {view === '2d' ? (
+                <LayoutSvg objects={pkg.objects} layout={pkg.layout} />
+              ) : (
+                <PlantViewer3D objects={pkg.objects} layout={pkg.layout} />
+              )}
+              <DesignSummary pkg={pkg} />
             </div>
-            <LayoutSvg objects={pkg.objects} layout={pkg.layout} />
-            <DesignSummary pkg={pkg} />
-          </div>
+            {/* Print-only full design report (T6.4) — the PDF target. */}
+            <DesignReport pkg={pkg} />
+          </>
         ) : (
           <div className="space-y-6">
             <div>
