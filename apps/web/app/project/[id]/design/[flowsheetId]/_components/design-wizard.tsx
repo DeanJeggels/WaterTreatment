@@ -11,7 +11,6 @@ import {
 } from '@repo/auto-design';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 /**
@@ -274,12 +273,13 @@ function Field({
   className?: string;
   children: React.ReactNode;
 }) {
+  // Native <label> wrapping the control => implicit association (a11y + getByLabel).
   return (
-    <div className={`space-y-1.5 ${className ?? ''}`}>
-      <Label>{label}</Label>
+    <label className={`block space-y-1.5 ${className ?? ''}`}>
+      <span className="text-sm font-medium leading-none">{label}</span>
       {children}
       {error?.length ? <p className="text-xs text-destructive">{error[0]}</p> : null}
-    </div>
+    </label>
   );
 }
 

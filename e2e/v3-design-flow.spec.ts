@@ -57,7 +57,7 @@ test.describe('AquaSim v3 guided design (authenticated)', () => {
     await page.getByRole('button', { name: /generate design/i }).click();
 
     await expect(page.getByRole('img', { name: /plant layout/i })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText(/compliance/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /compliance/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /JSON/i })).toBeVisible();
   });
 });
