@@ -59,6 +59,10 @@ test.describe('AquaSim v3 guided design (authenticated)', () => {
     await expect(page.getByRole('img', { name: /plant layout/i })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('heading', { name: /compliance/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /JSON/i })).toBeVisible();
+
+    // Toggle the 3D view — the DesignPackage extrudes into a Three.js canvas.
+    await page.getByRole('button', { name: '3D', exact: true }).click();
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
   });
 
   test('client name entered in the wizard carries over to the Proposal tab', async ({ page }) => {
