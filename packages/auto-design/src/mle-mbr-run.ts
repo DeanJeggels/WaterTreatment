@@ -17,7 +17,8 @@ import {
   type PlantLayout,
 } from '@repo/object-model';
 import { zones } from '@repo/layout-engine';
-import { arrangeMechanicalLayout } from './mechanical-layout';
+import { optimiseLayout } from './optimise-layout';
+import { buildModelJson } from './build-model-json';
 import type { MleMbrInputs } from './inputs';
 
 export interface MleMbrRunMeta {
@@ -65,9 +66,10 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
     ? { boundary: input.siteBoundary }
     : { boundary: [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: W }, { x: 0, y: W }] };
 
-  // Stage 4: installation-type arrangement + orientation (sets placements; may add a housing).
-  const mech = arrangeMechanicalLayout(placeable, input, design);
-  const withHousing = mech.container ? [...base, mech.container] : base;
+  // Stages 4 + 5: arrange (installation-type rules) → optimise (score candidates,
+  // pick the best). optimiseLayout sets the selected placements on `placeable`.
+  const opt = optimiseLayout(placeable, input, design);
+  const withHousing = opt.container ? [...base, opt.container] : base;
 
   // Stage 3: enrich EVERY object (incl. the housing + cassette) with mechanical detail.
   const objects = applyMechanicalDetail(withHousing, design, { maintenanceAccess: input.maintenanceAccess });
@@ -79,9 +81,22 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
     corridors: zoneResult.corridors,
     bunds: zoneResult.bunds,
     pipeRoutes: zoneResult.pipeRoutes,
-    violations: zoneResult.violations,
-    rulesApplied: [...mech.appliedRules.map((rule) => ({ rule })), ...zoneResult.rulesApplied],
+    violations: [
+      ...zoneResult.violations,
+      ...opt.selected.hardViolations.map((message) => ({ code: 'LAYOUT_HARD', message, severity: 'error' as const })),
+    ],
+    rulesApplied: [
+      ...opt.appliedRules.map((rule) => ({ rule })),
+      { rule: `Layout optimisation: selected "${opt.selected.label}" of ${opt.candidates.length} candidate(s) — score ${opt.selected.score}, ${opt.selected.metrics.maintenanceAccess} maintenance access, footprint ${opt.selected.metrics.footprintM2} m² (${opt.selected.metrics.footprintUsedPct}% of plot).`, detail: `weights: ${JSON.stringify(opt.weights)}` },
+      ...zoneResult.rulesApplied,
+    ],
   };
+  // Violation messages were built pre-enrichment (raw tags); remap to equipment ids.
+  if (opt.selected.hardViolations.length) {
+    const tagToEq = new Map(objects.filter((o) => o.mechanical).map((o) => [o.tag, o.mechanical!.equipmentId]));
+    const remap = (msg: string): string => { let m = msg; for (const [tag, eq] of tagToEq) m = m.split(tag).join(eq); return m; };
+    for (const v of plantLayout.violations) if (v.code === 'LAYOUT_HARD') v.message = remap(v.message);
+  }
 
   // The MBR cassette is snapped to the aeration parent's footprint (nested inside).
   if (cassette) {
@@ -149,6 +164,14 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
     totals: { capexZar: 0, installedKW: design.utilities.installedKW, footprintM2: round2(footprintM2) },
     provenance: { calculations: design.calculationRecords, layoutRules: 'CH-ISE v1' },
     mleMbr: design as unknown as Record<string, unknown>,
+    layoutOptions: opt.candidates.map((c) => ({
+      key: c.key, label: c.label, arrangementLogic: c.arrangementLogic, score: c.score, valid: c.valid,
+      selected: c.key === opt.selected.key,
+      pipeLengthM: c.metrics.pipeLengthM, bendCount: c.metrics.bendCount, crossingCount: c.metrics.crossingCount,
+      footprintM2: c.metrics.footprintM2, footprintUsedPct: c.metrics.footprintUsedPct, maintenanceAccess: c.metrics.maintenanceAccess,
+      tradeoffs: c.tradeoffs, bestForPriority: c.bestForPriority, clearanceCompromises: c.clearanceCompromises,
+    })),
+    modelJson: buildModelJson(objects, design, input, { corridors: zoneResult.corridors }) as unknown as Record<string, unknown>,
   };
 
   return { design, objects, package: parseDesignPackage(pkg) };
