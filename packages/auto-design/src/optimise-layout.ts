@@ -71,8 +71,11 @@ export function weightsFor(priority: ClientPriority): LayoutWeights {
 }
 
 // ---- geometry helpers ----
+/** Equipment housed inside a container/skid — its position is owned by the housing, not the site. */
+const isInsideContainer = (o: EngineeringObject): boolean => o.ext?.parentContainer !== undefined || o.ext?.parentSkid !== undefined;
+/** Inside another object (cassette in tank, submersible in tank, equipment in container) — excluded from site overlap/boundary/metrics. The container/skid shell itself IS counted. */
 const isNested = (o: EngineeringObject): boolean =>
-  o.ext?.insideParent === true || (o.params.kind === 'pump' && o.params.pumpType === 'submersible') || o.class === 'building';
+  o.ext?.insideParent === true || (o.params.kind === 'pump' && o.params.pumpType === 'submersible') || isInsideContainer(o);
 interface Box { cx: number; cy: number; hx: number; hy: number }
 function boxOf(o: EngineeringObject): Box {
   const rot = ((o.placement.rotationDeg % 180) + 180) % 180;
@@ -208,7 +211,8 @@ function compactTransform(objects: EngineeringObject[]): EngineeringObject[] {
   const rowY = tankYs.length ? tankYs.reduce((a, b) => a + b, 0) / tankYs.length : 0;
   const aerX = objects.find((o) => o.params.kind === 'tank' && o.params.function === 'mbr')?.placement.location.x ?? 0;
   for (const o of objects) {
-    if (o.class === 'disinfection' || o.class === 'dosing_skid') {
+    // Container-housed UV/dosing stay in their zone; only free-standing (civil) tertiary folds.
+    if ((o.class === 'disinfection' || o.class === 'dosing_skid') && !isInsideContainer(o)) {
       // fold tertiary into a second row just above the tank array (shorter X extent)
       o.placement = { ...o.placement, location: { ...o.placement.location, x: aerX + (o.class === 'dosing_skid' ? 3 : 1.5), y: rowY + 6 } };
     }
@@ -217,7 +221,9 @@ function compactTransform(objects: EngineeringObject[]): EngineeringObject[] {
 }
 /** Access: scale spacing outward from the centroid for generous maintenance access. */
 function accessTransform(objects: EngineeringObject[]): EngineeringObject[] {
-  const placed = objects.filter((o) => !(o.placement.location.x === 0 && o.placement.location.y === 0) && !(o.ext?.insideParent));
+  // Scale free-standing site equipment (tanks + their submersibles move together);
+  // never the container/skid shell or its housed equipment (must stay within the envelope).
+  const placed = objects.filter((o) => !(o.placement.location.x === 0 && o.placement.location.y === 0) && !o.ext?.insideParent && !isInsideContainer(o) && o.class !== 'building');
   const cx = placed.reduce((s, o) => s + o.placement.location.x, 0) / Math.max(1, placed.length);
   const cy = placed.reduce((s, o) => s + o.placement.location.y, 0) / Math.max(1, placed.length);
   const k = 1.35;
