@@ -17,7 +17,7 @@ import {
   type PlantLayout,
 } from '@repo/object-model';
 import { zones } from '@repo/layout-engine';
-import { arrangeMechanicalLayout } from './mechanical-layout';
+import { optimiseLayout } from './optimise-layout';
 import type { MleMbrInputs } from './inputs';
 
 export interface MleMbrRunMeta {
@@ -65,9 +65,10 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
     ? { boundary: input.siteBoundary }
     : { boundary: [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: W }, { x: 0, y: W }] };
 
-  // Stage 4: installation-type arrangement + orientation (sets placements; may add a housing).
-  const mech = arrangeMechanicalLayout(placeable, input, design);
-  const withHousing = mech.container ? [...base, mech.container] : base;
+  // Stages 4 + 5: arrange (installation-type rules) → optimise (score candidates,
+  // pick the best). optimiseLayout sets the selected placements on `placeable`.
+  const opt = optimiseLayout(placeable, input, design);
+  const withHousing = opt.container ? [...base, opt.container] : base;
 
   // Stage 3: enrich EVERY object (incl. the housing + cassette) with mechanical detail.
   const objects = applyMechanicalDetail(withHousing, design, { maintenanceAccess: input.maintenanceAccess });
@@ -80,7 +81,11 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
     bunds: zoneResult.bunds,
     pipeRoutes: zoneResult.pipeRoutes,
     violations: zoneResult.violations,
-    rulesApplied: [...mech.appliedRules.map((rule) => ({ rule })), ...zoneResult.rulesApplied],
+    rulesApplied: [
+      ...opt.appliedRules.map((rule) => ({ rule })),
+      { rule: `Layout optimisation: selected "${opt.selected.label}" of ${opt.candidates.length} candidate(s) — score ${opt.selected.score}, ${opt.selected.metrics.maintenanceAccess} maintenance access, footprint ${opt.selected.metrics.footprintM2} m² (${opt.selected.metrics.footprintUsedPct}% of plot).`, detail: `weights: ${JSON.stringify(opt.weights)}` },
+      ...zoneResult.rulesApplied,
+    ],
   };
 
   // The MBR cassette is snapped to the aeration parent's footprint (nested inside).
@@ -149,6 +154,13 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
     totals: { capexZar: 0, installedKW: design.utilities.installedKW, footprintM2: round2(footprintM2) },
     provenance: { calculations: design.calculationRecords, layoutRules: 'CH-ISE v1' },
     mleMbr: design as unknown as Record<string, unknown>,
+    layoutOptions: opt.candidates.map((c) => ({
+      key: c.key, label: c.label, arrangementLogic: c.arrangementLogic, score: c.score, valid: c.valid,
+      selected: c.key === opt.selected.key,
+      pipeLengthM: c.metrics.pipeLengthM, bendCount: c.metrics.bendCount, crossingCount: c.metrics.crossingCount,
+      footprintM2: c.metrics.footprintM2, footprintUsedPct: c.metrics.footprintUsedPct, maintenanceAccess: c.metrics.maintenanceAccess,
+      tradeoffs: c.tradeoffs, bestForPriority: c.bestForPriority, clearanceCompromises: c.clearanceCompromises,
+    })),
   };
 
   return { design, objects, package: parseDesignPackage(pkg) };

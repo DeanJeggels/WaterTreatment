@@ -25,6 +25,9 @@ export { runMleMbr } from './mle-mbr-run';
 export type { MechLayoutResult } from './mechanical-layout';
 export { arrangeMechanicalLayout } from './mechanical-layout';
 
+export type { LayoutWeights, LayoutMetrics, LayoutCandidate, OptimiseResult, AccessRating } from './optimise-layout';
+export { optimiseLayout, weightsFor } from './optimise-layout';
+
 export type { ValidationError, ValidationResult } from './validate';
 export { validateInputs } from './validate';
 
