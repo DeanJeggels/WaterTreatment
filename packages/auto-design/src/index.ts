@@ -28,6 +28,9 @@ export { arrangeMechanicalLayout } from './mechanical-layout';
 export type { LayoutWeights, LayoutMetrics, LayoutCandidate, OptimiseResult, AccessRating } from './optimise-layout';
 export { optimiseLayout, weightsFor } from './optimise-layout';
 
+export type { ModelJson, ModelEquipment, ModelPipe, ModelLayout } from './build-model-json';
+export { buildModelJson } from './build-model-json';
+
 export type { ValidationError, ValidationResult } from './validate';
 export { validateInputs } from './validate';
 
