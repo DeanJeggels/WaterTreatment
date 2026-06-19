@@ -252,6 +252,48 @@ export interface MaterialSpec {
  * `params` are independent fields — the class↔params coherence invariant is
  * enforced at the zod/runtime layer (T0.3), not by the TypeScript type.
  */
+// ---- Stage 3: mechanical equipment detail (nozzles, accessories, clearances) ----
+export interface Nozzle {
+  /** N1, N2 … */
+  id: string;
+  service: string;
+  sizeMm: number;
+  face: 'upstream' | 'downstream' | 'top' | 'bottom' | 'side';
+  elevationMm: number;
+  flangeStandard: string;
+}
+export interface MaintenanceClearance {
+  N_mm: number;
+  S_mm: number;
+  E_mm: number;
+  W_mm: number;
+}
+export interface StandardsCheck {
+  check: string;
+  status: 'pass' | 'warn' | 'fail';
+  note?: string;
+}
+/** Discipline-tagged equipment detail enforced by the mechanical/civil standards. */
+export interface MechanicalDetail {
+  /** Discipline-prefixed equipment id: T-/P-/BL-/SC-/MB-/UV-/DS-/CIP-/SL-. */
+  equipmentId: string;
+  vendor: string;
+  model: string;
+  dutyStandby: { duty: number; standby: number; configuration: string };
+  dimensionsMm: {
+    lengthMm?: number;
+    widthMm?: number;
+    heightMm?: number;
+    diameterMm?: number;
+    wallThicknessMm?: number;
+    weightKg?: number;
+  };
+  nozzles: Nozzle[];
+  accessories: string[];
+  clearance: MaintenanceClearance;
+  standardsCompliance: StandardsCheck[];
+}
+
 export interface EngineeringObject {
   schemaVersion: SchemaVersion;
   /** Stable uuid — survives re-layout & re-run. */
@@ -278,6 +320,8 @@ export interface EngineeringObject {
   designNotes: string[];
   /** Omitted only for purely manual annotations. */
   sourceCalc?: SourceCalc;
+  /** Stage 3 mechanical detail (nozzles, accessories, clearances, duty/standby). */
+  mechanical?: MechanicalDetail;
   /** Forward-compat (BIM GUID, asset no.) — never load-bearing. */
   ext?: Record<string, unknown>;
 }

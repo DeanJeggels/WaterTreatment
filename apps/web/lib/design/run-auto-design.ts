@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import { runAutoDesign, assembleDesignPackage, type DesignInputs } from '@repo/auto-design';
+import { runAutoDesign, assembleDesignPackage, runMleMbr, type DesignInputs, type MleMbrInputs } from '@repo/auto-design';
 import type { DesignPackage } from '@repo/object-model';
 
 /**
@@ -85,6 +85,64 @@ export async function runAndPersistDesign(
     await supabase.from('projects').update({ name: inputs.meta.projectName }).eq('id', projectId);
   }
 
+  return pkg;
+}
+
+/**
+ * MLE-MBR design path (T: redesign). Runs the deterministic engine + assembles
+ * the package (carrying the full design for the report), persists it, and syncs
+ * the project name. Supabase touches live ONLY here.
+ */
+export async function runAndPersistMleMbr(
+  projectId: string,
+  flowsheetId: string,
+  inputs: MleMbrInputs,
+): Promise<DesignPackage> {
+  const generatedAt = new Date().toISOString();
+  const { package: pkg } = runMleMbr(inputs, { projectId, flowsheetId, generatedAt });
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { error } = await supabase.from('design_packages').upsert(
+    {
+      project_id: projectId,
+      flowsheet_id: flowsheetId,
+      version: 1,
+      schema_version: pkg.schemaVersion,
+      inputs,
+      package: pkg,
+      plant_type: pkg.meta.plantType,
+      compliance_pass: pkg.compliance.pass,
+      generated_by: user.id,
+    },
+    { onConflict: 'flowsheet_id,version' },
+  );
+  if (error) throw new Error(error.message);
+
+  // Carry client/location to the shared proposal_data (Proposal cover reads it).
+  const { data: fsRow } = await supabase.from('flowsheets').select('proposal_data').eq('id', flowsheetId).maybeSingle();
+  const existingProposal = (fsRow?.proposal_data ?? {}) as Record<string, unknown>;
+  const existingClient = (existingProposal.client ?? {}) as Record<string, unknown>;
+  await supabase
+    .from('flowsheets')
+    .update({
+      proposal_data: {
+        ...existingProposal,
+        client: {
+          ...existingClient,
+          ...(inputs.meta.client ? { name: inputs.meta.client } : {}),
+          ...(inputs.meta.siteLocation ? { location: inputs.meta.siteLocation } : {}),
+        },
+      },
+    })
+    .eq('id', flowsheetId);
+  if (inputs.meta.projectName) {
+    await supabase.from('projects').update({ name: inputs.meta.projectName }).eq('id', projectId);
+  }
   return pkg;
 }
 

@@ -23,6 +23,11 @@ const MATERIAL_BY_UNIT: Record<string, MaterialSpec> = {
   dewatering: { primary: 'stainless-304' },
   chemical_dosing: { primary: 'HDPE', coating: '316SS bund' },
   aeration_blower: { primary: 'carbon-steel', coating: 'painted skid + acoustic hood' },
+  feed_pump: { primary: 'stainless-316' },
+  recirculation_pump: { primary: 'stainless-316' },
+  was_pump: { primary: 'stainless-316' },
+  permeate_pump: { primary: 'stainless-316' },
+  cip_tank: { primary: 'HDPE', coating: '316SS bund' },
 };
 
 export function materialFor(kind: string): MaterialSpec {
