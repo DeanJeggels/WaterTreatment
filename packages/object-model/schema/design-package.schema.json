@@ -1965,6 +1965,13 @@
         },
         "additionalProperties": {}
       }
+    },
+    "modelJson": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
     }
   },
   "required": [

@@ -18,6 +18,7 @@ import {
 } from '@repo/object-model';
 import { zones } from '@repo/layout-engine';
 import { optimiseLayout } from './optimise-layout';
+import { buildModelJson } from './build-model-json';
 import type { MleMbrInputs } from './inputs';
 
 export interface MleMbrRunMeta {
@@ -164,6 +165,7 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
       footprintM2: c.metrics.footprintM2, footprintUsedPct: c.metrics.footprintUsedPct, maintenanceAccess: c.metrics.maintenanceAccess,
       tradeoffs: c.tradeoffs, bestForPriority: c.bestForPriority, clearanceCompromises: c.clearanceCompromises,
     })),
+    modelJson: buildModelJson(objects, design, input) as unknown as Record<string, unknown>,
   };
 
   return { design, objects, package: parseDesignPackage(pkg) };

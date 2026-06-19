@@ -167,6 +167,8 @@ export interface DesignPackage {
   mleMbr?: Record<string, unknown>;
   /** Stage-5 layout-optimisation candidate summaries (top 3, selected flagged). */
   layoutOptions?: Array<Record<string, unknown>>;
+  /** Stage-6 complete 3D/BIM model data (equipment + pipework + layout). */
+  modelJson?: Record<string, unknown>;
 }
 
 /** Re-exported so downstream packages can pull this from `@repo/object-model`. */
