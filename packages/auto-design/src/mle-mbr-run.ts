@@ -14,8 +14,10 @@ import {
   parseDesignPackage,
   type DesignPackage,
   type EngineeringObject,
+  type PlantLayout,
 } from '@repo/object-model';
-import { layout } from '@repo/layout-engine';
+import { zones } from '@repo/layout-engine';
+import { arrangeMechanicalLayout } from './mechanical-layout';
 import type { MleMbrInputs } from './inputs';
 
 export interface MleMbrRunMeta {
@@ -68,7 +70,22 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
   const site = input.siteBoundary?.length
     ? { boundary: input.siteBoundary }
     : { boundary: [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: W }, { x: 0, y: W }] };
-  const plantLayout = layout(placeable, site);
+
+  // Stage 4: installation-type arrangement + orientation (overrides placements).
+  const mech = arrangeMechanicalLayout(placeable, input, design);
+  if (mech.container) objects.push(mech.container);
+  const layoutObjects = objects.filter((o) => o !== cassette);
+  const zoneResult = zones(layoutObjects);
+  const plantLayout: PlantLayout = {
+    siteBoundary: site.boundary,
+    corridors: zoneResult.corridors,
+    bunds: zoneResult.bunds,
+    pipeRoutes: zoneResult.pipeRoutes,
+    violations: zoneResult.violations,
+    rulesApplied: [...mech.appliedRules.map((rule) => ({ rule })), ...zoneResult.rulesApplied],
+  };
+
+  // The MBR cassette is snapped to the aeration parent's footprint (nested inside).
   if (cassette) {
     const parent = objects.find((o) => o.id === cassette.ext!.parentId);
     if (parent) {

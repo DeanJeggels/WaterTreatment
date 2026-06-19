@@ -98,9 +98,9 @@ export function PlantViewer3D({ objects, layout }: Props) {
         geom = new THREE.BoxGeometry(o.geometry.footprint.lengthM, h, o.geometry.footprint.widthM);
       }
 
-      // Tanks/reactors are translucent so nested equipment (the MBR cassette
-      // inside the aeration tank) shows through.
-      const isVessel = o.class === 'tank' || o.class === 'reactor';
+      // Tanks/reactors (nested MBR cassette) and the container/building (housed
+      // equipment) are translucent so the equipment inside shows through.
+      const isVessel = o.class === 'tank' || o.class === 'reactor' || o.class === 'building';
       const mesh = new THREE.Mesh(
         geom,
         new THREE.MeshStandardMaterial({ color, roughness: 0.72, metalness: 0.12, transparent: isVessel, opacity: isVessel ? 0.5 : 1, depthWrite: !isVessel }),

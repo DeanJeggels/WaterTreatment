@@ -22,6 +22,9 @@ export { defaultInputs, defaultMleMbrInputs } from './inputs';
 export type { MleMbrRunMeta, MleMbrRunResult } from './mle-mbr-run';
 export { runMleMbr } from './mle-mbr-run';
 
+export type { MechLayoutResult } from './mechanical-layout';
+export { arrangeMechanicalLayout } from './mechanical-layout';
+
 export type { ValidationError, ValidationResult } from './validate';
 export { validateInputs } from './validate';
 
