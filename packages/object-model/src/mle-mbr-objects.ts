@@ -46,16 +46,60 @@ export function instantiateMleMbr(design: MleMbrDesign, opts: MleMbrInstantiateO
   const anoxicTank = design.tanks.find((t) => t.name.toLowerCase().includes('anoxic'));
   const aerTank = design.tanks.find((t) => t.name.toLowerCase().includes('aeration'));
 
+  // Per-kind duty-letter sequence so a duty/standby SET tags A/B (not the shared area position).
+  const dutySeqMap = new Map<string, number>();
+  const nextDuty = (kind: string): number => {
+    const s = (dutySeqMap.get(kind) ?? 0) + 1;
+    dutySeqMap.set(kind, s);
+    return s;
+  };
+
   const id = (s: string) => `obj-${s}`;
   const BUFFER = id('buffer');
+  const FEED = id('feed-pump');
   const ANOXIC = id('anoxic');
   const AERATION = id('aeration');
   const CASSETTE = id('mbr-cassette');
+  const RECIRC = id('recirc-pump');
   const PROC_BLOWER = id('process-blower');
   const SCOUR_BLOWER = id('scour-blower');
   const PERMEATE = id('permeate-pump');
   const UV = id('uv');
   const DOSING = id('naocl-dosing');
+  const CIP = id('cip-tank');
+  const WAS = id('was-pump');
+  const SILO = id('thickening-silo');
+
+  // Submersible transfer/recycle/waste pump builder (Stage 3 duty/standby items).
+  const pumpObject = (
+    oid: string, area: number, unitKind: string, label: string,
+    service: 'transfer' | 'RAS' | 'WAS', dutyFlowM3h: number, standby: number,
+    headM: number, toObjectId: string | null, toPort: string,
+    note: string, zone: EngineeringObject['placement']['zone'],
+  ): EngineeringObject => {
+    const kw = Math.max(1.1, round2(dutyFlowM3h * 0.05 * (headM / 8)));
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      id: oid,
+      tag: allocateTag(area, unitKind, nextSeq(area), nextDuty(unitKind)),
+      class: 'pump',
+      discipline: 'mechanical',
+      label,
+      geometry: { shape: 'rectangle', footprint: { lengthM: 1.6, widthM: 1.0 }, heightM: dim(1.4, 'm') },
+      placement: { location: { x: 0, y: 0, z: 0 }, rotationDeg: 0, zone },
+      material: materialFor(unitKind),
+      capacity: { dutyFlow: dim(round2(dutyFlowM3h), 'm3/hr') },
+      params: {
+        kind: 'pump', service, pumpType: 'submersible', dutyFlowM3H: dim(round2(dutyFlowM3h), 'm3/hr'),
+        headM: dim(headM, 'm'), installedKW: dim(kw, 'kW'),
+        configuration: standby > 0 ? `1 duty + ${standby} standby` : '1 duty', standbyCount: standby, vfd: true,
+      },
+      ports: [{ id: 'in', role: 'inlet', localOffset: { x: 0, y: 0, z: 0 } }, { id: 'out', role: 'outlet', localOffset: { x: 0, y: 0, z: 0 } }],
+      connections: toObjectId ? [{ toObjectId, toPort, medium: 'water' as const }] : [],
+      designNotes: [note],
+      sourceCalc: { flowsheetId: fid, nodeId: oid.replace('obj-', ''), unitType: 'inlet_pumping', sizingKeys: ['dutyFlow'], records: [] },
+    };
+  };
 
   // ---- Buffer / EQ tank (area 1) ----
   if (eqTank) {
@@ -72,10 +116,12 @@ export function instantiateMleMbr(design: MleMbrDesign, opts: MleMbrInstantiateO
       capacity: { volume: dim(eqTank.volumeM3, 'm3') },
       params: { kind: 'tank', function: 'equalisation', volumeM3: dim(eqTank.volumeM3, 'm3'), sideWaterDepthM: dim(4.5, 'm'), hydraulicRetentionTimeH: dim(12, 'h'), bunded: false },
       ports: [{ id: 'in', role: 'inlet', localOffset: { x: 0, y: 0, z: 0 } }, { id: 'out', role: 'outlet', localOffset: { x: 0, y: 0, z: 0 } }],
-      connections: [{ toObjectId: ANOXIC, toPort: 'in', medium: 'water' }],
+      connections: [{ toObjectId: FEED, toPort: 'in', medium: 'water' }],
       designNotes: ['Buffer volume = 0.5 × ADWF (12 h holding).'],
       sourceCalc: { flowsheetId: fid, nodeId: 'buffer', unitType: 'equalisation_tank', sizingKeys: ['volume'], records: [] },
     });
+    // Feed / buffer transfer pumps (duty/standby) lift to the bioreactor.
+    objects.push(pumpObject(FEED, 1, 'feed_pump', 'Feed / buffer transfer pump', 'transfer', round2(design.flows.pwwf / 24), 1, 12, ANOXIC, 'in', 'Duty/standby submersible transfer pumps from the buffer tank to the anoxic reactor.', 'headworks'));
   }
 
   // ---- Anoxic tank (area 2) ----
@@ -153,43 +199,50 @@ export function instantiateMleMbr(design: MleMbrDesign, opts: MleMbrInstantiateO
     });
   }
 
+  // ---- Mixed-liquor recirculation pump (a-recycle, single duty) ----
+  objects.push(pumpObject(RECIRC, 2, 'recirculation_pump', 'Mixed-liquor recirculation pump', 'RAS', round2((design.process.recycle.a * design.flows.adwf) / 24), 0, 6, ANOXIC, 'recycle', `Internal a-recycle ${design.process.recycle.a}×Q from the aeration tank to the anoxic reactor.`, 'process'));
+
   // ---- Blowers (distinct: process air + MBR scour) (area 2) ----
-  const blower = (oid: string, label: string, airAm3h: number, kw: number, scour: boolean, seq: number): EngineeringObject => ({
-    schemaVersion: SCHEMA_VERSION,
-    id: oid,
-    tag: allocateTag(2, 'aeration_blower', seq),
-    class: 'blower',
-    discipline: 'mechanical',
-    label,
-    geometry: { shape: 'rectangle', footprint: { lengthM: 2.4, widthM: 1.6 }, heightM: dim(1.8, 'm') },
-    placement: { location: { x: 0, y: 0, z: 0 }, rotationDeg: 0, zone: 'blower' },
-    material: materialFor('aeration_blower'),
-    capacity: { airFlow: dim(airAm3h, 'Am3/hr'), blowerKW: dim(kw, 'kW') },
-    params: { kind: 'blower', blowerType: kw > 50 ? 'hst-turbo' : 'positive-displacement', airFlowAm3H: dim(airAm3h, 'Am3/hr'), dischargePressureKpa: dim(round2(4.5 * 9.81 + 15), 'kPa'), installedKW: dim(kw, 'kW'), configuration: '2 duty + 1 standby', vfd: true },
-    ports: [{ id: 'air', role: 'air', localOffset: { x: 0, y: 0, z: 0 } }, { id: 'power', role: 'power', localOffset: { x: 0, y: 0, z: 0 } }],
-    connections: [{ toObjectId: scour ? CASSETTE : AERATION, toPort: 'air', medium: 'air' }],
-    designNotes: [scour ? 'MBR membrane air scour blower.' : 'Biological process-air blower (fine-bubble diffusers).'],
-    sourceCalc: { flowsheetId: fid, nodeId: scour ? 'scour-blower' : 'process-blower', unitType: 'aeration_blower', sizingKeys: ['airFlow', 'blowerKW'], records: [] },
-  });
-  objects.push(blower(PROC_BLOWER, 'Process air blower', design.aeration.processAirAm3h, design.aeration.blowerKW, false, nextSeq(2)));
-  objects.push(blower(SCOUR_BLOWER, 'MBR air scour blower', design.mbr.airScourAm3h, design.mbr.scourBlowerKW, true, nextSeq(2)));
+  const BLOWER_MARGIN = 1.2; // 20% airflow safety margin (mechanical standard)
+  const blower = (oid: string, label: string, airDemandAm3h: number, kw: number, scour: boolean): EngineeringObject => {
+    const airSelected = round2(airDemandAm3h * BLOWER_MARGIN);
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      id: oid,
+      tag: allocateTag(2, 'aeration_blower', nextSeq(2), nextDuty('aeration_blower')),
+      class: 'blower',
+      discipline: 'mechanical',
+      label,
+      geometry: { shape: 'rectangle', footprint: { lengthM: 2.4, widthM: 1.6 }, heightM: dim(1.8, 'm') },
+      placement: { location: { x: 0, y: 0, z: 0 }, rotationDeg: 0, zone: 'blower' },
+      material: materialFor('aeration_blower'),
+      capacity: { airFlow: dim(airSelected, 'Am3/hr'), blowerKW: dim(kw, 'kW') },
+      params: { kind: 'blower', blowerType: kw > 50 ? 'hst-turbo' : 'positive-displacement', airFlowAm3H: dim(airSelected, 'Am3/hr'), dischargePressureKpa: dim(round2(4.5 * 9.81 + 15), 'kPa'), installedKW: dim(kw, 'kW'), configuration: '1 duty + 1 standby', vfd: true },
+      ports: [{ id: 'air', role: 'air', localOffset: { x: 0, y: 0, z: 0 } }, { id: 'power', role: 'power', localOffset: { x: 0, y: 0, z: 0 } }],
+      connections: [{ toObjectId: scour ? CASSETTE : AERATION, toPort: 'air', medium: 'air' }],
+      designNotes: [`${scour ? 'MBR membrane air scour blower.' : 'Biological process-air blower (fine-bubble diffusers).'} Selected airflow ${airSelected} Am³/h incl. 20% margin on ${round2(airDemandAm3h)} Am³/h demand.`],
+      sourceCalc: { flowsheetId: fid, nodeId: scour ? 'scour-blower' : 'process-blower', unitType: 'aeration_blower', sizingKeys: ['airFlow', 'blowerKW'], records: [] },
+    };
+  };
+  objects.push(blower(PROC_BLOWER, 'Process air blower', design.aeration.processAirAm3h, design.aeration.blowerKW, false));
+  objects.push(blower(SCOUR_BLOWER, 'MBR air scour blower', design.mbr.airScourAm3h, design.mbr.scourBlowerKW, true));
 
   // ---- Permeate pump (area 3) ----
   objects.push({
     schemaVersion: SCHEMA_VERSION,
     id: PERMEATE,
-    tag: allocateTag(3, 'inlet_pumping', nextSeq(3)),
+    tag: allocateTag(3, 'permeate_pump', nextSeq(3), nextDuty('permeate_pump')),
     class: 'pump',
     discipline: 'mechanical',
     label: 'MBR permeate pump',
     geometry: { shape: 'rectangle', footprint: { lengthM: 2.0, widthM: 1.2 }, heightM: dim(1.5, 'm') },
     placement: { location: { x: 0, y: 0, z: 0 }, rotationDeg: 0, zone: 'process' },
-    material: materialFor('inlet_pumping'),
+    material: materialFor('permeate_pump'),
     capacity: { dutyFlow: dim(design.mbr.permeateDutyM3h, 'm3/hr') },
-    params: { kind: 'pump', service: 'permeate', pumpType: 'centrifugal', dutyFlowM3H: dim(design.mbr.permeateDutyM3h, 'm3/hr'), headM: dim(8, 'm'), installedKW: dim(round2(Math.max(1.1, design.mbr.permeateDutyM3h * 0.05)), 'kW'), configuration: '1 duty + 1 standby', vfd: true },
+    params: { kind: 'pump', service: 'permeate', pumpType: 'centrifugal', dutyFlowM3H: dim(design.mbr.permeateDutyM3h, 'm3/hr'), headM: dim(8, 'm'), installedKW: dim(round2(Math.max(1.1, design.mbr.permeateDutyM3h * 0.05)), 'kW'), configuration: '1 duty + 1 standby', standbyCount: 1, vfd: true },
     ports: [{ id: 'in', role: 'inlet', localOffset: { x: 0, y: 0, z: 0 } }, { id: 'out', role: 'outlet', localOffset: { x: 0, y: 0, z: 0 } }],
     connections: [{ toObjectId: UV, toPort: 'in', medium: 'water' }],
-    designNotes: ['Draws permeate from the MBR cassette under suction.'],
+    designNotes: ['Draws permeate from the MBR cassette under suction (dry-mounted, surface).'],
     sourceCalc: { flowsheetId: fid, nodeId: 'permeate-pump', unitType: 'inlet_pumping', sizingKeys: ['dutyFlow'], records: [] },
   });
 
@@ -220,14 +273,14 @@ export function instantiateMleMbr(design: MleMbrDesign, opts: MleMbrInstantiateO
     class: 'dosing_skid',
     discipline: 'mechanical',
     label: 'Sodium hypochlorite dosing skid',
-    geometry: { shape: 'rectangle', footprint: { lengthM: 3.0, widthM: 2.0 }, heightM: dim(2.2, 'm'), capacity: dim(round2(design.utilities.naoclLPerDay * 7 / 1000), 'm3') },
+    geometry: { shape: 'rectangle', footprint: { lengthM: 3.0, widthM: 2.0 }, heightM: dim(2.2, 'm'), capacity: dim(design.utilities.naoclStorageM3, 'm3') },
     placement: { location: { x: 0, y: 0, z: 0 }, rotationDeg: 0, zone: 'chemical' },
     material: materialFor('chemical_dosing'),
     capacity: { dailyConsumption: dim(design.utilities.naoclLPerDay, 'L/d') },
     params: {
       kind: 'dosing_skid', chemical: 'sodium-hypochlorite', doseMgL: dim(2, 'mg/L'),
       dailyConsumptionKg: dim(round2(design.utilities.naoclLPerDay * 0.15), 'kg/d'),
-      storageDays: dim(7, 'd'), storageTankVolumeM3: dim(round2(Math.max(0.5, design.utilities.naoclLPerDay * 7 / 1000)), 'm3'),
+      storageDays: dim(design.utilities.naoclStorageDays, 'd'), storageTankVolumeM3: dim(round2(Math.max(0.5, design.utilities.naoclStorageM3)), 'm3'),
       meteringPumps: { duty: 1, standby: 1, pumpType: 'diaphragm' }, bunded: true,
     },
     ports: [{ id: 'in', role: 'inlet', localOffset: { x: 0, y: 0, z: 0 } }, { id: 'out', role: 'outlet', localOffset: { x: 0, y: 0, z: 0 } }, { id: 'dose', role: 'chemical', localOffset: { x: 0, y: 0, z: 0 } }],
@@ -235,6 +288,51 @@ export function instantiateMleMbr(design: MleMbrDesign, opts: MleMbrInstantiateO
     designNotes: [`NaOCl ${design.utilities.naoclLPerDay} L/day at 2 mg/L Cl (150 g/L product). Final disinfection before treated-water discharge.`],
     sourceCalc: { flowsheetId: fid, nodeId: 'naocl-dosing', unitType: 'chemical_dosing', sizingKeys: ['dailyConsumption'], records: [] },
   });
+
+  // ---- CIP tank (membrane clean-in-place) (area 3) ----
+  if (design.mbr.included && design.mbr.cipTankM3 > 0) {
+    objects.push({
+      schemaVersion: SCHEMA_VERSION,
+      id: CIP,
+      tag: allocateTag(3, 'cip_tank', nextSeq(3)),
+      class: 'tank',
+      discipline: 'mechanical',
+      label: 'Membrane CIP tank',
+      geometry: tankGeometry(design.mbr.cipTankM3, 2.5),
+      placement: { location: { x: 0, y: 0, z: 0 }, rotationDeg: 0, zone: 'chemical' },
+      material: materialFor('cip_tank'),
+      capacity: { volume: dim(design.mbr.cipTankM3, 'm3') },
+      params: { kind: 'tank', function: 'contact', volumeM3: dim(design.mbr.cipTankM3, 'm3'), sideWaterDepthM: dim(2.5, 'm'), bunded: true },
+      ports: [{ id: 'in', role: 'inlet', localOffset: { x: 0, y: 0, z: 0 } }, { id: 'out', role: 'outlet', localOffset: { x: 0, y: 0, z: 0 } }, { id: 'drain', role: 'waste', localOffset: { x: 0, y: 0, z: 0 } }],
+      connections: [{ toObjectId: CASSETTE, toPort: 'permeate', medium: 'chemical' }],
+      designNotes: [`CIP tank = 1.5 × membrane module volume × ${design.mbr.moduleCount} modules. Holds cleaning solution for membrane back-clean.`],
+      sourceCalc: { flowsheetId: fid, nodeId: 'cip-tank', unitType: 'equalisation_tank', sizingKeys: ['volume'], records: [] },
+    });
+  }
+
+  // ---- WAS pump (sludge wasting, single duty, area 4) ----
+  objects.push(pumpObject(WAS, 4, 'was_pump', 'Waste-activated-sludge pump', 'WAS', Math.max(0.5, round2(design.solids.wasM3d / 24)), 0, 8, SILO, 'in', `SRT-control sludge wasting at ${design.solids.wasM3d} m³/d to the thickening silo.`, 'sludge'));
+
+  // ---- Sludge thickening silo (area 4) ----
+  if (design.solids.thickeningSiloM3 > 0) {
+    objects.push({
+      schemaVersion: SCHEMA_VERSION,
+      id: SILO,
+      tag: allocateTag(4, 'thickener', nextSeq(4)),
+      class: 'thickener',
+      discipline: 'process',
+      label: 'Sludge thickening silo',
+      geometry: tankGeometry(design.solids.thickeningSiloM3, 4),
+      placement: { location: { x: 0, y: 0, z: 0 }, rotationDeg: 0, zone: 'sludge' },
+      material: materialFor('thickener'),
+      capacity: { volume: dim(design.solids.thickeningSiloM3, 'm3') },
+      params: { kind: 'equipment', equipmentType: 'other', capacity: dim(design.solids.thickeningSiloM3, 'm3'), configuration: design.solids.thickening },
+      ports: [{ id: 'in', role: 'inlet', localOffset: { x: 0, y: 0, z: 0 } }, { id: 'supernatant', role: 'outlet', localOffset: { x: 0, y: 0, z: 0 } }, { id: 'sludge', role: 'waste', localOffset: { x: 0, y: 0, z: 0 } }],
+      connections: [],
+      designNotes: [`Gravity thickening silo (${design.solids.thickening}); ${design.solids.thickeningSiloM3} m³ buffering WAS at ${design.solids.wasM3d} m³/d.`],
+      sourceCalc: { flowsheetId: fid, nodeId: 'thickening-silo', unitType: 'thickener', sizingKeys: ['volume'], records: [] },
+    });
+  }
 
   return objects;
 }

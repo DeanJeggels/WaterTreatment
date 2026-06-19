@@ -54,26 +54,24 @@ function toBasis(input: MleMbrInputs): MleMbrBasis {
 
 export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunResult {
   const design = designMleMbr(toBasis(input));
-  // Stage 3: enrich with mechanical detail (nozzles, accessories, clearances, duty/standby).
-  const objects = applyMechanicalDetail(
-    instantiateMleMbr(design, { flowsheetId: meta.flowsheetId }),
-    design,
-    { maintenanceAccess: input.maintenanceAccess },
-  );
+  const base = instantiateMleMbr(design, { flowsheetId: meta.flowsheetId });
 
-  // The MBR cassette lives INSIDE the aeration tank — keep it out of the plot
-  // packing, then snap it to the parent's footprint after layout.
-  const cassette = objects.find((o) => o.ext?.insideParent);
-  const placeable = objects.filter((o) => o !== cassette);
+  // The MBR cassette lives INSIDE the aeration tank — keep it out of the plot packing.
+  const cassette0 = base.find((o) => o.ext?.insideParent);
+  const placeable = base.filter((o) => o !== cassette0);
   const L = input.footprintLengthM;
   const W = input.footprintWidthM;
   const site = input.siteBoundary?.length
     ? { boundary: input.siteBoundary }
     : { boundary: [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: W }, { x: 0, y: W }] };
 
-  // Stage 4: installation-type arrangement + orientation (overrides placements).
+  // Stage 4: installation-type arrangement + orientation (sets placements; may add a housing).
   const mech = arrangeMechanicalLayout(placeable, input, design);
-  if (mech.container) objects.push(mech.container);
+  const withHousing = mech.container ? [...base, mech.container] : base;
+
+  // Stage 3: enrich EVERY object (incl. the housing + cassette) with mechanical detail.
+  const objects = applyMechanicalDetail(withHousing, design, { maintenanceAccess: input.maintenanceAccess });
+  const cassette = objects.find((o) => o.ext?.insideParent);
   const layoutObjects = objects.filter((o) => o !== cassette);
   const zoneResult = zones(layoutObjects);
   const plantLayout: PlantLayout = {
@@ -102,8 +100,8 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
   const predicted: Record<string, number> = {
     NH3N: design.effluent.ammoniaMgL,
     NO3N: design.effluent.nitrateMgL,
-    TSS: 2, // MBR permeate
-    COD: 40, // MBR permeate (typical)
+    TSS: design.effluent.permeateTssMgL, // MBR permeate (engine-derived)
+    COD: design.effluent.permeateCodMgL,
   };
   const perParameter: Record<string, { target: number; predicted: number; pass: boolean }> = {};
   for (const [k, p] of Object.entries(predicted)) {

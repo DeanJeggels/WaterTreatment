@@ -63,6 +63,34 @@ describe('instantiateMleMbr (object instantiation)', () => {
     expect(all.some((o) => o.class === 'pump')).toBe(true);
   });
 
+  it('instantiates the full equipment set: feed/recirc/WAS pumps, CIP tank, thickening silo', () => {
+    const all = objs();
+    const pumps = all.filter((o) => o.class === 'pump');
+    const services = pumps.map((p) => (p.params.kind === 'pump' ? p.params.service : '')).sort();
+    expect(services).toEqual(expect.arrayContaining(['transfer', 'RAS', 'WAS', 'permeate']));
+    // feed pumps duty/standby; recirc + WAS single duty
+    const feed = pumps.find((p) => p.params.kind === 'pump' && p.params.service === 'transfer')!;
+    const was = pumps.find((p) => p.params.kind === 'pump' && p.params.service === 'WAS')!;
+    expect(feed.params.kind === 'pump' && feed.params.standbyCount).toBe(1);
+    expect(was.params.kind === 'pump' && was.params.standbyCount).toBe(0);
+    expect(all.some((o) => o.label.includes('CIP'))).toBe(true);
+    expect(all.some((o) => o.class === 'thickener')).toBe(true);
+  });
+
+  it('routes buffer → feed pump → anoxic (no direct gravity connection)', () => {
+    const all = objs();
+    const buffer = all.find((o) => o.label.toLowerCase().includes('buffer'))!;
+    const feed = all.find((o) => o.params.kind === 'pump' && o.params.service === 'transfer')!;
+    expect(buffer.connections.some((c) => c.toObjectId === feed.id)).toBe(true);
+  });
+
+  it('applies the 20% blower airflow margin to the selected airflow', () => {
+    const all = objs();
+    const d = designMleMbr(BASIS);
+    const proc = all.find((o) => o.label === 'Process air blower')!;
+    expect(proc.capacity.airFlow?.value).toBeCloseTo(d.aeration.processAirAm3h * 1.2, 0);
+  });
+
   it('copies sizing verbatim (no re-derivation) and is deterministic', () => {
     const all = objs();
     const cassette = all.find((o) => o.class === 'membrane')!;
