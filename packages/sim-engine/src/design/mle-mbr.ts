@@ -80,6 +80,11 @@ export interface MleMbrConstants {
   // MBR
   mbrOpDurationH: number;
   mbrMembranePeakFactor: number; // ×AWWF over the operational window
+  // master-spec ancillaries
+  sewageReturnFraction: number; // sewage return factor (water-demand → ADWF)
+  naoclStorageDays: number; // NaOCl bulk storage basis
+  permeateTssMgL: number; // MBR permeate quality (deterministic effluent)
+  permeateCodMgL: number;
 }
 
 const DEFAULTS: MleMbrConstants = {
@@ -122,6 +127,10 @@ const DEFAULTS: MleMbrConstants = {
   minDOmgL: 2,
   mbrOpDurationH: 19.2,
   mbrMembranePeakFactor: 1.5,
+  sewageReturnFraction: 0.7,
+  naoclStorageDays: 30,
+  permeateTssMgL: 2,
+  permeateCodMgL: 40,
 };
 
 interface MembraneSpec {
@@ -131,11 +140,13 @@ interface MembraneSpec {
   scourCoeff: number;
   /** Nominal SMU module membrane area, m² (flagged assumption for module count). */
   nominalModuleAreaM2: number;
+  /** SMU module envelope volume, m³ (CIP tank = 1.5 × this × module count). */
+  moduleVolumeM3: number;
 }
 
 const MEMBRANES: Record<MembraneModel, MembraneSpec> = {
-  megavision: { label: 'Megavision hollow fibre', fluxLmh: 18.4, scourCoeff: 15, nominalModuleAreaM2: 200 },
-  memstar: { label: 'Memstar hollow fibre', fluxLmh: 20, scourCoeff: 9, nominalModuleAreaM2: 200 },
+  megavision: { label: 'Megavision hollow fibre', fluxLmh: 18.4, scourCoeff: 15, nominalModuleAreaM2: 200, moduleVolumeM3: 2.0 },
+  memstar: { label: 'Memstar hollow fibre', fluxLmh: 20, scourCoeff: 9, nominalModuleAreaM2: 200, moduleVolumeM3: 1.6 },
 };
 
 // ---- helpers ----
@@ -183,7 +194,7 @@ export interface DerivedInfluent {
   TKN: number; FSA: number; TP: number; OP: number; TSS: number; ISS: number; FOG: number; alkalinity: number; pH: number;
 }
 export interface CodFractionation { USO: number; BSO: number; UPO: number; BPO: number; totalBiodegradable: number; totalUnbiodegradable: number; fSbs: number; }
-export interface FlowSet { adwf: number; awwf: number; pdwf: number; pwwf: number; }
+export interface FlowSet { adwf: number; awwf: number; pdwf: number; pwwf: number; sewageReturnFraction: number; }
 export interface TankOption { label: string; lengthM: number; widthM: number; depthM: number; volumeM3: number; }
 export interface SizedTank { name: string; volumeM3: number; options: [TankOption, TankOption]; }
 
@@ -201,7 +212,7 @@ export interface MleMbrDesign {
     aerobicHrtH: number; anoxicHrtH: number; anaerobicHrtH: number;
     wasM3d: number; wasKgTssD: number;
   };
-  effluent: { ammoniaMgL: number; nitrateMgL: number; tknMgL: number; nitrogenRemovalPct: number; effluentAlkalinityMgL: number };
+  effluent: { ammoniaMgL: number; nitrateMgL: number; tknMgL: number; nitrogenRemovalPct: number; effluentAlkalinityMgL: number; permeateTssMgL: number; permeateCodMgL: number };
   aeration: {
     o2OhoKgD: number; o2NitrificationKgD: number; o2DenitCreditKgD: number; o2ScourCreditKgD: number; o2TotalKgD: number;
     soteFraction: number; oteFraction: number;
@@ -213,7 +224,7 @@ export interface MleMbrDesign {
   };
   tanks: SizedTank[];
   solids: { wasM3d: number; wasTssMgL: number; wasVssMgL: number; thickeningSiloM3: number; thickening: string; dewatering: string };
-  utilities: { installedKW: number; dutyKW: number; energyKwhPerM3: number; naoclLPerDay: number; naoclLPerHour: number; naoclStorageM3: number; cipAcidLPerDay: number; serviceWaterM3d: number };
+  utilities: { installedKW: number; dutyKW: number; energyKwhPerM3: number; naoclLPerDay: number; naoclLPerHour: number; naoclStorageDays: number; naoclStorageM3: number; cipAcidLPerDay: number; serviceWaterM3d: number };
   calculationRecords: CalculationRecord[];
   warnings: string[];
 }
@@ -229,7 +240,7 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
   const awwf = Q * k.awwfFactor;
   const pdwf = Q * k.peakFactor;
   const pwwf = awwf * k.peakFactor;
-  const flows: FlowSet = { adwf: round(Q, 1), awwf: round(awwf, 1), pdwf: round(pdwf, 1), pwwf: round(pwwf, 1) };
+  const flows: FlowSet = { adwf: round(Q, 1), awwf: round(awwf, 1), pdwf: round(pdwf, 1), pwwf: round(pwwf, 1), sewageReturnFraction: k.sewageReturnFraction };
   records.push(rec('Average wet-weather flow', 'AWWF', 'AWWF = ADWF × awwfFactor', { ADWF: { value: Q, unit: 'm3/d', source: 'user input' } }, awwf, 'm3/d'));
   records.push(rec('Peak wet-weather flow', 'PWWF', 'PWWF = AWWF × PF', { AWWF: { value: awwf, unit: 'm3/d', source: 'computed' }, PF: { value: k.peakFactor, unit: '', source: 'default' } }, pwwf, 'm3/d'));
 
@@ -387,11 +398,11 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
   const energyKwhPerM3 = (dutyKW * 24) / Q;
   const naoclLPerDay = (Q * 1000 * 2) / 150000; // 2 mg/L Cl, 150 g/L NaOCl
   const naoclLPerHour = naoclLPerDay / 24;
-  const naoclStorageM3 = round((naoclLPerDay * 30) / 1000, 2); // 30-day bulk storage
+  const naoclStorageM3 = round((naoclLPerDay * k.naoclStorageDays) / 1000, 2); // bulk storage
   const cipAcidLPerDay = round(membraneAreaReq * 0.002, 2); // citric/HCl CIP estimate
   const serviceWaterM3d = round(Q * 0.02, 2);
-  // CIP tank = 1.5 × membrane module envelope volume (SMU envelope ≈ 2 m³/module — flagged assumption)
-  const cipTankM3 = round(1.5 * moduleCount * 2.0, 2);
+  // CIP tank = 1.5 × membrane module envelope volume × module count
+  const cipTankM3 = round(1.5 * moduleCount * m.moduleVolumeM3, 2);
   // Sludge thickening silo — 3-day WAS buffer at ~2.5× thickening
   const thickeningSiloM3 = round(Qw * 3 * 0.4, 2);
 
@@ -412,7 +423,7 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
       aerobicHrtH: round((Va / Q) * 24, 2), anoxicHrtH: round((Vax / Q) * 24, 2), anaerobicHrtH: round((Van / Q) * 24, 2),
       wasM3d: round(Qw, 2), wasKgTssD: round(FXw, 1),
     },
-    effluent: { ammoniaMgL: round(Math.max(0, Nae), 2), nitrateMgL: round(Nne, 2), tknMgL: round(TKNe, 2), nitrogenRemovalPct: round(nRemovalPct, 1), effluentAlkalinityMgL: round(effAlk, 0) },
+    effluent: { ammoniaMgL: round(Math.max(0, Nae), 2), nitrateMgL: round(Nne, 2), tknMgL: round(TKNe, 2), nitrogenRemovalPct: round(nRemovalPct, 1), effluentAlkalinityMgL: round(effAlk, 0), permeateTssMgL: k.permeateTssMgL, permeateCodMgL: k.permeateCodMgL },
     aeration: {
       o2OhoKgD: round(FOc, 2), o2NitrificationKgD: round(FOn, 2), o2DenitCreditKgD: round(FOdn, 2), o2ScourCreditKgD: round(scourO2KgD, 2), o2TotalKgD: round(FOt, 2),
       soteFraction: round(sote, 4), oteFraction: round(ote, 5),
@@ -424,7 +435,7 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
     },
     tanks,
     solids: { wasM3d: round(Qw, 2), wasTssMgL: k.mlssMgL, wasVssMgL: round(k.mlssMgL * 0.72, 0), thickeningSiloM3, thickening: 'Gravity thickener / picket-fence', dewatering: 'Belt press or screw press' },
-    utilities: { installedKW: round(installedKW, 1), dutyKW: round(dutyKW, 1), energyKwhPerM3: round(energyKwhPerM3, 2), naoclLPerDay: round(naoclLPerDay, 2), naoclLPerHour: round(naoclLPerHour, 3), naoclStorageM3, cipAcidLPerDay, serviceWaterM3d },
+    utilities: { installedKW: round(installedKW, 1), dutyKW: round(dutyKW, 1), energyKwhPerM3: round(energyKwhPerM3, 2), naoclLPerDay: round(naoclLPerDay, 2), naoclLPerHour: round(naoclLPerHour, 3), naoclStorageDays: k.naoclStorageDays, naoclStorageM3, cipAcidLPerDay, serviceWaterM3d },
     calculationRecords: records,
     warnings,
   };

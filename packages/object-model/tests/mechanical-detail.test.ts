@@ -44,10 +44,18 @@ describe('applyMechanicalDetail — Stage 3 equipment objects', () => {
     expect(tank.mechanical!.dimensionsMm.weightKg).toBeGreaterThan(0);
   });
 
-  it('rotating equipment is duty/standby; tanks are single', () => {
+  it('rotating equipment is duty/standby per its own config; tanks are single', () => {
     expect(enriched.filter((o) => o.class === 'blower').every((o) => o.mechanical!.dutyStandby.standby === 1)).toBe(true);
-    expect(enriched.filter((o) => o.class === 'pump').every((o) => o.mechanical!.dutyStandby.standby === 1)).toBe(true);
+    // feed + permeate pumps are duty/standby; recirc + WAS are single duty
+    const pumpStandby = enriched.filter((o) => o.class === 'pump').map((o) => o.mechanical!.dutyStandby.standby).sort();
+    expect(pumpStandby).toContain(1);
+    expect(pumpStandby).toContain(0);
     expect(enriched.find((o) => o.class === 'tank')!.mechanical!.dutyStandby.standby).toBe(0);
+  });
+
+  it('submersible pumps get the SS316 guide-rail/chain accessory set', () => {
+    const sub = enriched.find((o) => o.class === 'pump' && o.params.kind === 'pump' && o.params.pumpType === 'submersible')!;
+    expect(sub.mechanical!.accessories).toEqual(expect.arrayContaining([expect.stringMatching(/guide rail/i), expect.stringMatching(/dry-run/i)]));
   });
 
   it('blowers get inlet filter / NRV / PRV; air nozzles sized at ~15 m/s', () => {

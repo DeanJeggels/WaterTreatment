@@ -53,7 +53,8 @@ function vendorModel(o: EngineeringObject, design: MleMbrDesign): { vendor: stri
   switch (o.class) {
     case 'tank':
     case 'reactor':
-      return { vendor: 'Site-built RC civil', model: 'Reinforced concrete tank' };
+    case 'thickener':
+      return { vendor: 'Site-built RC civil', model: o.class === 'thickener' ? 'Gravity thickening silo' : 'Reinforced concrete tank' };
     case 'membrane':
       return { vendor: design.mbr.model.split(' ')[0] ?? 'Megavision', model: `${design.mbr.model} SMU cassette` };
     case 'blower': {
@@ -73,8 +74,12 @@ function vendorModel(o: EngineeringObject, design: MleMbrDesign): { vendor: stri
 
 function dutyStandbyFor(o: EngineeringObject): MechanicalDetail['dutyStandby'] {
   switch (o.class) {
+    case 'pump': {
+      // Honour the pump's own duty/standby (recirc + WAS are single duty).
+      const sb = o.params.kind === 'pump' ? (o.params.standbyCount ?? 1) : 1;
+      return { duty: 1, standby: sb, configuration: sb > 0 ? `1 duty + ${sb} standby` : '1 duty' };
+    }
     case 'blower':
-    case 'pump':
       return { duty: 1, standby: 1, configuration: '1 duty + 1 standby' };
     case 'dosing_skid':
       return { duty: 1, standby: 1, configuration: '1 duty + 1 standby (metering pumps)' };
@@ -87,6 +92,7 @@ function accessoriesFor(o: EngineeringObject): string[] {
   switch (o.class) {
     case 'tank':
     case 'reactor':
+    case 'thickener':
       return ['Overflow (one size up on inlet)', 'Drain with isolation valve', 'Access cover ≥600×600 mm', 'Level measurement (hydrostatic/radar)'];
     case 'blower': {
       const kw = o.params.kind === 'blower' ? o.params.installedKW.value : 0;
@@ -94,8 +100,12 @@ function accessoriesFor(o: EngineeringObject): string[] {
       if (kw > 7.5) base.push('Acoustic enclosure (if >85 dBA at 1 m)');
       return base;
     }
-    case 'pump':
-      return ['Inlet isolation valve', 'Outlet isolation valve', 'Outlet non-return valve', 'Outlet pressure gauge'];
+    case 'pump': {
+      const submersible = o.params.kind === 'pump' && o.params.pumpType === 'submersible';
+      return submersible
+        ? ['SS316 guide rails', 'SS316 lifting chain', 'Auto-coupling discharge elbow', 'Dry-run protection']
+        : ['Inlet isolation valve', 'Outlet isolation valve', 'Outlet non-return valve', 'Outlet pressure gauge'];
+    }
     case 'membrane':
       return ['Permeate isolation valve', 'Air-scour isolation valve', 'Back-pulse connection', 'Lifting beam for cassette removal'];
     case 'disinfection':
@@ -148,6 +158,7 @@ function nozzlesFor(o: EngineeringObject, design: MleMbrDesign): Nozzle[] {
     id, service, sizeMm, face, elevationMm: round(elevationMm), flangeStandard: FLANGE[medium],
   });
   switch (o.class) {
+    case 'thickener':
     case 'tank':
     case 'reactor': {
       const hyd = pipeSizeMm(pwwfM3h, 1.0); // gravity
@@ -198,9 +209,9 @@ function dimensionsFor(o: EngineeringObject): MechanicalDetail['dimensionsMm'] {
   const lengthMm = round(o.geometry.footprint.lengthM * 1000);
   const widthMm = round(o.geometry.footprint.widthM * 1000);
   const heightMm = round((o.geometry.heightM?.value ?? 2) * 1000);
-  if (o.class === 'tank' || o.class === 'reactor') {
+  if (o.class === 'tank' || o.class === 'reactor' || o.class === 'thickener') {
     const depthM = o.geometry.heightM?.value ?? 5;
-    const wall = depthM <= 3.5 ? 200 : 250; // BS 8007 wall thickness by depth
+    const wall = depthM <= 3 ? 200 : 250; // BS 8007 wall thickness by depth (≤3 m / 3–5 m)
     const baseT = 0.25;
     const perimeterM = 2 * (o.geometry.footprint.lengthM + o.geometry.footprint.widthM);
     const areaM2 = o.geometry.footprint.lengthM * o.geometry.footprint.widthM;
@@ -222,10 +233,21 @@ function dimensionsFor(o: EngineeringObject): MechanicalDetail['dimensionsMm'] {
 function complianceFor(o: EngineeringObject): StandardsCheck[] {
   const p = (check: string): StandardsCheck => ({ check, status: 'pass' });
   const w = (check: string, note: string): StandardsCheck => ({ check, status: 'warn', note });
+  const chk = (check: string, ok: boolean, note: string): StandardsCheck => (ok ? { check, status: 'pass' } : { check, status: 'warn', note });
   switch (o.class) {
     case 'tank':
     case 'reactor':
-      return [p('Freeboard ≥300 mm'), p('Wall thickness per depth (BS 8007)'), p('Access cover ≥600×600 mm'), w('Crack width ≤0.2 mm', 'confirm at detailed design / reinforcement')];
+    case 'thickener': {
+      const freeboardMm = (o.geometry.freeboardM?.value ?? 0.5) * 1000;
+      const depthM = o.geometry.heightM?.value ?? 5;
+      const wallMm = depthM <= 3 ? 200 : 250;
+      return [
+        chk('Freeboard ≥300 mm', freeboardMm >= 300, `freeboard ${Math.round(freeboardMm)} mm below 300 mm`),
+        chk('Wall thickness per depth (BS 8007)', (depthM <= 3 ? wallMm >= 200 : wallMm >= 250), `wall ${wallMm} mm thin for ${depthM} m depth`),
+        p('Access cover ≥600×600 mm'),
+        w('Crack width ≤0.2 mm', 'confirm at detailed design / reinforcement'),
+      ];
+    }
     case 'blower':
       return [p('20% airflow margin applied'), p('Duty/standby provided'), p('Inlet filter + NRV + PRV fitted'), w('Acoustic enclosure if >85 dBA', 'confirm sound power at selection')];
     case 'pump':

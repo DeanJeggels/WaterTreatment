@@ -16,6 +16,11 @@ interface TagSpec {
 const TAG_SPECS: Record<string, TagSpec> = {
   influent: { mnemonic: 'INF', suffix: 'PT' },
   inlet_pumping: { mnemonic: 'PMP', suffix: 'duty' },
+  feed_pump: { mnemonic: 'FDP', suffix: 'duty' },
+  recirculation_pump: { mnemonic: 'RCP', suffix: 'duty' },
+  was_pump: { mnemonic: 'WAS', suffix: 'duty' },
+  permeate_pump: { mnemonic: 'PMP', suffix: 'duty' },
+  cip_tank: { mnemonic: 'CIP', suffix: 'TK' },
   screen: { mnemonic: 'SCN', suffix: 'SC' },
   grit_removal: { mnemonic: 'GRT', suffix: 'EQ' },
   equalisation_tank: { mnemonic: 'EQ', suffix: 'TK' },
@@ -36,6 +41,7 @@ const TAG_SPECS: Record<string, TagSpec> = {
 const PROCESS_AREA: Record<string, number> = {
   influent: 1,
   inlet_pumping: 1,
+  feed_pump: 1,
   screen: 1,
   grit_removal: 1,
   equalisation_tank: 1,
@@ -43,12 +49,16 @@ const PROCESS_AREA: Record<string, number> = {
   bioreactor_aerobic: 2,
   bioreactor_anaerobic: 2,
   aeration_blower: 2,
+  recirculation_pump: 2,
   chemical_dosing: 3,
   secondary_clarifier: 3,
   mbr: 3,
+  permeate_pump: 3,
+  cip_tank: 3,
   uv_disinfection: 3,
   effluent: 3,
   thickener: 4,
+  was_pump: 4,
   dewatering: 4,
   electrical_room: 5,
   building: 5,
@@ -67,9 +77,11 @@ function dutyLetter(seq: number): string {
  * Allocate a deterministic ISA tag. `kind` is the unit kind (e.g. unitType);
  * `area` is the process-area digit; `seq` is the 1-based unit number in that area.
  */
-export function allocateTag(area: number, kind: string, seq: number): string {
+export function allocateTag(area: number, kind: string, seq: number, dutySeq?: number): string {
   const spec = TAG_SPECS[kind] ?? { mnemonic: kind.slice(0, 3).toUpperCase().padEnd(3, 'X'), suffix: 'EQ' };
   const nnnn = String(area * 1000 + 100 + seq).padStart(4, '0');
-  const suffix = spec.suffix === 'duty' ? dutyLetter(seq) : spec.suffix;
+  // The unit NUMBER keeps the area sequence (unique); the duty LETTER enumerates
+  // the rotating set (A/B/C…) from a per-kind sequence when supplied.
+  const suffix = spec.suffix === 'duty' ? dutyLetter(dutySeq ?? seq) : spec.suffix;
   return `${spec.mnemonic}-${nnnn}-${suffix}`;
 }
