@@ -64,6 +64,23 @@ export function detectRecycleEdges(nodes: _GraphNode[], edges: _GraphEdge[]): _G
   return _topologicalSort(nodes, edges).recycleEdges;
 }
 
+// MLE-MBR preliminary design engine (deterministic Marais-Ekama replication)
+export { designMleMbr } from './design/mle-mbr';
+export type {
+  MleMbrBasis,
+  MleMbrConstants,
+  MleMbrDesign,
+  DischargeStandard,
+  MembraneModel,
+  LandUse,
+  ProcessConfig,
+  DerivedInfluent,
+  CodFractionation,
+  FlowSet,
+  TankOption,
+  SizedTank,
+} from './design/mle-mbr';
+
 // BoQ engine
 export { aggregateBoQ } from './boq/aggregator';
 export type {

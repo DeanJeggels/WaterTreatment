@@ -5,6 +5,7 @@
  * randomness, no AI.
  */
 import { SA_TYPICAL_INFLUENT, getDwaLimits, type DwaDischargeStandard } from '@repo/design-library';
+import type { MembraneModel, LandUse } from '@repo/sim-engine';
 
 /** MVP ships the MLE train; the rest are Phase 2 (kept for type-completeness). */
 export type PlantType = 'MLE' | 'MBR' | 'extended_aeration' | 'conventional_as';
@@ -102,5 +103,77 @@ export function defaultInputs(tier: DischargeTier = 'General'): DesignInputs {
       pRemoval: limits.TP !== undefined ? inf.TP > limits.TP : false,
       disinfection: true,
     },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// MLE-MBR design inputs (the redesigned form — the system is now MLE-MBR)
+// ---------------------------------------------------------------------------
+
+// ---- Stage 1 configuration inputs (master spec) ----
+export type InstallationType =
+  | 'underground_civil'
+  | 'above_ground_civil'
+  | 'container_20ft'
+  | 'container_40ft'
+  | 'container_twin_20ft'
+  | 'open_frame_skid';
+export type NumberOfTrains = 'single' | 'dual' | 'multiple';
+export type MaintenanceAccess = 'standard' | 'full';
+export type TankPlacement = 'above_ground' | 'in_ground';
+export type ClientPriority = 'lowest_cost' | 'best_access' | 'smallest_footprint' | 'future_expansion';
+
+/** The small input set for the MLE-MBR design (everything else is derived). */
+export interface MleMbrInputs {
+  meta: ProjectMeta;
+  // --- process inputs ---
+  /** Average dry-weather flow, m³/d. */
+  adwfM3d: number;
+  /** Raw influent total COD, mg/L (all other influent quality is derived). */
+  codMgL: number;
+  tminC: number;
+  tmaxC: number;
+  elevationM: number;
+  nitrogenRemoval: boolean;
+  phosphorusRemoval: boolean;
+  dischargeStandard: DischargeTier;
+  mbrRequired: boolean;
+  membraneModel: MembraneModel;
+  landUse: LandUse;
+  // --- Stage 1 configuration inputs ---
+  installationType: InstallationType;
+  /** Available site footprint, metres. */
+  footprintLengthM: number;
+  footprintWidthM: number;
+  numberOfTrains: NumberOfTrains;
+  maintenanceAccess: MaintenanceAccess;
+  tankPlacement: TankPlacement;
+  containerStacking: boolean;
+  clientPriority: ClientPriority;
+  siteBoundary?: Array<{ x: number; y: number }>;
+}
+
+export function defaultMleMbrInputs(): MleMbrInputs {
+  return {
+    meta: { projectName: '' },
+    adwfM3d: 70,
+    codMgL: 900,
+    tminC: 15,
+    tmaxC: 25,
+    elevationM: 1700,
+    nitrogenRemoval: true,
+    phosphorusRemoval: false,
+    dischargeStandard: 'Special',
+    mbrRequired: true,
+    membraneModel: 'megavision',
+    landUse: 'residential',
+    installationType: 'above_ground_civil',
+    footprintLengthM: 80,
+    footprintWidthM: 60,
+    numberOfTrains: 'single',
+    maintenanceAccess: 'standard',
+    tankPlacement: 'above_ground',
+    containerStacking: false,
+    clientPriority: 'best_access',
   };
 }

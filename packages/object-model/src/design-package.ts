@@ -162,6 +162,9 @@ export interface DesignPackage {
   compliance: PackageCompliance;
   totals: PackageTotals;
   provenance: PackageProvenance;
+  /** Full MLE-MBR design output (drives the 10-section report). Opaque here to
+   *  avoid coupling object-model to the engine's design shape. */
+  mleMbr?: Record<string, unknown>;
 }
 
 /** Re-exported so downstream packages can pull this from `@repo/object-model`. */
