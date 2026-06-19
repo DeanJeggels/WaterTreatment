@@ -4,11 +4,12 @@ import type { MleMbrDesign } from '@repo/sim-engine';
 import type { DesignPackage } from '@repo/object-model';
 
 /**
- * MLE-MBR preliminary design report — the master-spec document (Stages 2–7,
- * incl. the tagged equipment list), print-only (`hidden print:block`), rendered
- * VERBATIM from the persisted design (pkg.mleMbr) + objects. window.print() targets it.
+ * MLE-MBR preliminary design report — the master-spec 13-section engineering
+ * document (+ JSON appendix + disclaimer), print-only (`hidden print:block`),
+ * rendered VERBATIM from the persisted design (pkg.mleMbr) + objects + modelJson.
+ * window.print() targets it.
  */
-function Section({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+function Section({ n, title, children }: { n: number | string; title: string; children: React.ReactNode }) {
   return (
     <section className="mb-7 break-inside-avoid">
       <h2 className="mb-2 border-b border-black/25 pb-1 text-base font-semibold">{n}. {title}</h2>
@@ -25,12 +26,29 @@ function T({ head, rows }: { head: string[]; rows: (string | number)[][] }) {
   );
 }
 
+const STANDARDS = [
+  'Concrete C30/37 (blinding C15); 50 mm cover to the wastewater face; crack width ≤0.2 mm (BS 8007 / SANS 10100).',
+  'Tank freeboard ≥300 mm; walls 200 mm to 3 m / 250 mm 3–5 m depth; 1:50 floor fall to a sump; 75 mm filleted internal corners.',
+  'Pipe velocities — gravity 0.6–3.0, pressure 0.8–2.5, suction 0.5–1.2, air 10–20, chemical 0.5–1.5 m/s; min process pipe 25 mm, sludge 50 mm.',
+  'Blowers 20% airflow margin + duty/standby; mandatory inlet filter, flexible connection, NRV, isolation valve, PRV; acoustic enclosure if >85 dBA.',
+  'Pumps duty/standby (recirc/WAS single duty); submersibles on SS316 guide rails + chain + auto-coupling + dry-run protection; surface pumps iso/iso/NRV/gauge.',
+  '1000 mm maintenance access on ≥1 side of every major item; 600 mm walkways; SS316 external + wastewater-contact fasteners; EPDM gaskets; no aluminium in wetted/chemical service.',
+  'Chemical bund ≥110% of the largest tank; puddle flanges + annular seals at all penetrations; flotation check on buried structures; 600 mm cover (900 mm trafficked).',
+];
+
 export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
   if (!pkg.mleMbr) return null;
   const d = pkg.mleMbr as unknown as MleMbrDesign;
   const i = d.influent;
   const date = pkg.meta.generatedAt?.slice(0, 10) ?? '';
   const limits = pkg.basis.dischargeStandard as Record<string, number | undefined>;
+  const detailed = pkg.objects.filter((o) => o.mechanical);
+  const checks = detailed.flatMap((o) => o.mechanical!.standardsCompliance.map((s) => ({ id: o.mechanical!.equipmentId, ...s })));
+  const passN = checks.filter((c) => c.status === 'pass').length;
+  const warnN = checks.filter((c) => c.status === 'warn').length;
+  const failN = checks.filter((c) => c.status === 'fail').length;
+  const layoutOpts = (Array.isArray(pkg.layoutOptions) ? pkg.layoutOptions : []) as Array<Record<string, unknown>>;
+  const model = pkg.modelJson as Record<string, unknown> | undefined;
 
   return (
     <div className="hidden bg-white text-black print:block">
@@ -58,10 +76,10 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         <div className="mt-3">
           <T head={['Effluent target', 'mg/L']} rows={[['COD', limits.COD ?? '—'], ['NH₃-N', limits.NH3N ?? '—'], ['NO₃-N', limits.NO3N ?? '—'], ['TSS', limits.TSS ?? '—'], ['TP', limits.TP ?? '—']]} />
         </div>
-        <p className="mt-2 text-xs text-gray-600">Operating temperature {d.basis.tminC}–{d.basis.tmaxC} °C · site elevation {d.basis.elevationM} m AMSL.</p>
+        <p className="mt-2 text-xs text-gray-600">Operating temperature {d.basis.tminC}–{d.basis.tmaxC} °C · site elevation {d.basis.elevationM} m AMSL · sewage return factor {d.flows.sewageReturnFraction}.</p>
       </Section>
 
-      <Section n={3} title="Process selection">
+      <Section n={3} title="Process selection and justification">
         <p className="text-xs leading-relaxed">
           {d.process.config === 'MLE' ? 'An MLE (Modified Ludzack-Ettinger) configuration is selected for nitrogen removal: buffer → anoxic → aeration tank with MBR → UV → chlorine dosing.'
             : d.process.config === 'A2O_UCT' ? 'A UCT/A²O configuration is selected for combined N + P removal.'
@@ -113,40 +131,13 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         ]} />
       </Section>
 
-      <Section n={7} title="Equipment list (tagged)">
-        <T head={['ID', 'Tag', 'Description', 'Duty/standby', 'L×W×H mm', 'Weight kg', 'Vendor']} rows={pkg.objects.filter((o) => o.mechanical).map((o) => {
+      <Section n={7} title="Equipment list">
+        <T head={['ID', 'Tag', 'Description', 'Duty/standby', 'L×W×H mm', 'Weight kg', 'Vendor']} rows={detailed.map((o) => {
           const m = o.mechanical!;
           const dm = m.dimensionsMm;
           return [m.equipmentId, o.tag, o.label, m.dutyStandby.configuration, `${dm.lengthMm ?? '—'}×${dm.widthMm ?? '—'}×${dm.heightMm ?? '—'}`, dm.weightKg ?? '—', m.vendor];
         })} />
-        <p className="mt-2 text-[10px] text-gray-500">Full nozzle schedules, accessories and maintenance clearances per item are in the design data model (Appendix / JSON export). Vendor/model are indicative pending procurement.</p>
-        <div className="mt-4">
-          <h3 className="mb-1 text-sm font-semibold">Mechanical layout &amp; orientation</h3>
-          <ul className="ml-4 list-disc text-xs leading-relaxed">
-            {pkg.layout.rulesApplied.filter((r) => r.rule && r.rule.length > 30).map((r, i) => (<li key={i}>{r.rule}</li>))}
-          </ul>
-          {pkg.objects.some((o) => o.ext?.orientation) && (
-            <table className="mt-2 w-full text-xs">
-              <thead><tr><th className="border-b border-black/30 py-1 pr-3 text-left font-semibold">Equipment</th><th className="border-b border-black/30 py-1 pr-3 text-left font-semibold">Orientation</th></tr></thead>
-              <tbody>{pkg.objects.filter((o) => o.ext?.orientation).map((o, i) => (
-                <tr key={i}><td className="border-b border-black/10 py-1 pr-3 align-top">{o.mechanical?.equipmentId ?? o.tag}</td><td className="border-b border-black/10 py-1 pr-3 align-top">{String(o.ext!.orientation)}</td></tr>
-              ))}</tbody>
-            </table>
-          )}
-        </div>
-        {Array.isArray(pkg.layoutOptions) && pkg.layoutOptions.length > 0 && (() => {
-          const opts = pkg.layoutOptions as Array<Record<string, unknown>>;
-          return (
-            <div className="mt-4">
-              <h3 className="mb-1 text-sm font-semibold">Layout options (Stage 5 optimisation)</h3>
-              <T head={['Option', 'Footprint m²', '% plot', 'Pipe m', 'Bends', 'Cross', 'Access', 'Score', 'Sel.']} rows={opts.map((o) => [String(o.label), Number(o.footprintM2), Number(o.footprintUsedPct), Number(o.pipeLengthM), Number(o.bendCount), Number(o.crossingCount), String(o.maintenanceAccess), Number(o.score), o.selected ? '✓' : ''])} />
-              <ul className="ml-4 mt-1 list-disc text-[10px] leading-relaxed text-gray-600">
-                {opts.map((o, i) => (<li key={i}><span className="font-semibold">{String(o.label)}:</span> {String(o.arrangementLogic)} <span className="italic">Trade-offs:</span> {String(o.tradeoffs)} Best for {String(o.bestForPriority)}. Clearances: {String(o.clearanceCompromises)}.</li>))}
-              </ul>
-              <p className="mt-1 text-[10px] text-gray-500">Lower score = better for the selected client priority. The selected option drives the persisted layout, 2D plan and 3D model; process parameters, equipment specs and pipe sizes are locked — only positions/orientations vary between options.</p>
-            </div>
-          );
-        })()}
+        <p className="mt-2 text-[10px] text-gray-500">Full nozzle schedules, accessories and maintenance clearances per item are in the model data (Appendix). Vendor/model are indicative pending procurement.</p>
       </Section>
 
       <Section n={8} title="Tank sizing (two layout options)">
@@ -157,25 +148,50 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         ])} />
       </Section>
 
-      <Section n={9} title="Solids handling">
-        <p className="mb-2 text-xs">Waste activated sludge is drawn directly from the membrane tank at MLSS concentration; recommended thickening: {d.solids.thickening}; dewatering: {d.solids.dewatering}.</p>
+      <Section n={9} title="Mechanical layout description">
+        <p className="mb-1 text-xs">The selected optimised layout applies these installation-type and orientation rules:</p>
+        <ul className="ml-4 list-disc text-xs leading-relaxed">
+          {pkg.layout.rulesApplied.filter((r) => r.rule && r.rule.length > 30).map((r, k) => (<li key={k}>{r.rule}</li>))}
+        </ul>
+        {pkg.objects.some((o) => o.ext?.orientation) && (
+          <table className="mt-2 w-full text-xs">
+            <thead><tr><th className="border-b border-black/30 py-1 pr-3 text-left font-semibold">Equipment</th><th className="border-b border-black/30 py-1 pr-3 text-left font-semibold">Orientation</th></tr></thead>
+            <tbody>{pkg.objects.filter((o) => o.ext?.orientation).map((o, k) => (
+              <tr key={k}><td className="border-b border-black/10 py-1 pr-3 align-top">{o.mechanical?.equipmentId ?? o.tag}</td><td className="border-b border-black/10 py-1 pr-3 align-top">{String(o.ext!.orientation)}</td></tr>
+            ))}</tbody>
+          </table>
+        )}
+        {layoutOpts.length > 0 && (
+          <div className="mt-4">
+            <h3 className="mb-1 text-sm font-semibold">Layout options considered (Stage 5 optimisation)</h3>
+            <T head={['Option', 'Footprint m²', '% plot', 'Pipe m', 'Bends', 'Cross', 'Access', 'Score', 'Sel.']} rows={layoutOpts.map((o) => [String(o.label), Number(o.footprintM2), Number(o.footprintUsedPct), Number(o.pipeLengthM), Number(o.bendCount), Number(o.crossingCount), String(o.maintenanceAccess), Number(o.score), o.selected ? '✓' : ''])} />
+            <ul className="ml-4 mt-1 list-disc text-[10px] leading-relaxed text-gray-600">
+              {layoutOpts.map((o, k) => (<li key={k}><span className="font-semibold">{String(o.label)}:</span> {String(o.arrangementLogic)} <span className="italic">Trade-offs:</span> {String(o.tradeoffs)} Best for {String(o.bestForPriority)}. Clearances: {String(o.clearanceCompromises)}.</li>))}
+            </ul>
+            <p className="mt-1 text-[10px] text-gray-500">Lower score = better for the selected client priority. The selected option drives the persisted layout, 2D plan and 3D model; process parameters, equipment specs and pipe sizes are locked — only positions/orientations vary between options.</p>
+          </div>
+        )}
+      </Section>
+
+      <Section n={10} title="Solids handling">
+        <p className="mb-2 text-xs">Waste activated sludge is drawn from the membrane tank at MLSS concentration by the WAS pump to the thickening silo; recommended thickening: {d.solids.thickening}; dewatering: {d.solids.dewatering}.</p>
         <T head={['Parameter', 'Value', 'Unit']} rows={[['WAS rate', d.solids.wasM3d, 'm³/d'], ['WAS TSS', d.solids.wasTssMgL.toLocaleString(), 'mg/L'], ['WAS VSS', d.solids.wasVssMgL.toLocaleString(), 'mg/L'], ['Thickening silo volume', d.solids.thickeningSiloM3, 'm³']]} />
       </Section>
 
-      <Section n={10} title="Utilities summary">
+      <Section n={11} title="Utilities summary">
         <T head={['Parameter', 'Value', 'Unit']} rows={[
           ['Installed power', d.utilities.installedKW, 'kW'],
           ['Duty power', d.utilities.dutyKW, 'kW'],
           ['Specific energy', d.utilities.energyKwhPerM3, 'kWh/m³'],
           ['Sodium hypochlorite (daily)', d.utilities.naoclLPerDay, 'L/d'],
           ['Sodium hypochlorite (hourly)', d.utilities.naoclLPerHour, 'L/h'],
-          ['NaOCl bulk storage (30 d)', d.utilities.naoclStorageM3, 'm³'],
+          [`NaOCl bulk storage (${d.utilities.naoclStorageDays} d)`, d.utilities.naoclStorageM3, 'm³'],
           ['CIP acid', d.utilities.cipAcidLPerDay, 'L/d'],
           ['Service water', d.utilities.serviceWaterM3d, 'm³/d'],
         ]} />
       </Section>
 
-      <Section n={11} title="Design summary">
+      <Section n={12} title="Design summary">
         <T head={['Parameter', 'Value', 'Unit']} rows={[
           ['Process', d.process.config + (d.mbr.included ? ' + MBR' : ''), ''],
           ['ADWF', d.flows.adwf, 'm³/d'],
@@ -192,15 +208,37 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         ]} />
       </Section>
 
+      <Section n={13} title="Standards compliance">
+        <p className="mb-1 text-xs">Mechanical &amp; civil standards enforced on this design:</p>
+        <ul className="ml-4 list-disc text-[10px] leading-relaxed">{STANDARDS.map((s, k) => (<li key={k}>{s}</li>))}</ul>
+        <p className="mb-1 mt-3 text-xs">Per-item compliance check — <span className="font-semibold text-green-700">{passN} pass</span>{warnN ? <span className="font-semibold text-amber-700"> · {warnN} warn</span> : null}{failN ? <span className="font-semibold text-red-700"> · {failN} fail</span> : null}:</p>
+        <T head={['ID', 'Check', 'Status', 'Note']} rows={checks.map((c) => [c.id, c.check, c.status === 'pass' ? '✓ pass' : c.status === 'warn' ? '⚠ warn' : '✗ fail', c.note ?? ''])} />
+      </Section>
+
+      <Section n="Appendix" title="Full equipment data model (JSON)">
+        {model ? (
+          <>
+            <p className="mb-1 text-[10px] text-gray-600">
+              Schema {String(model.schema)} · {(model.equipment as unknown[])?.length ?? 0} equipment items · {(model.pipework as unknown[])?.length ?? 0} pipe runs.
+              The complete machine-readable model below is the source of truth for the 3D/BIM rendering engine (also available via the JSON export).
+            </p>
+            <pre className="overflow-hidden whitespace-pre-wrap break-all border border-black/15 p-2 text-[6px] leading-tight">{JSON.stringify(model, null, 1)}</pre>
+          </>
+        ) : (
+          <p className="text-[10px] text-gray-500">Model data is available via the JSON export.</p>
+        )}
+      </Section>
+
       {d.warnings.length > 0 && (
         <div className="mb-4 rounded border border-amber-400 bg-amber-50 p-3 text-xs text-amber-900">
-          {d.warnings.map((w, i) => (<div key={i}>⚠ {w}</div>))}
+          {d.warnings.map((w, k) => (<div key={k}>⚠ {w}</div>))}
         </div>
       )}
 
-      <p className="mt-6 text-[10px] italic text-gray-500">
-        This design is preliminary, based on estimated influent quality and standard engineering assumptions. Detailed design should follow upon
-        appointment and receipt of actual site data and water-quality results.
+      <p className="mt-6 border-t border-black/20 pt-3 text-[10px] italic text-gray-600">
+        This design is preliminary and based on estimated influent quality and standard engineering assumptions. Detailed design must follow upon formal
+        appointment and receipt of confirmed site data, geotechnical investigation results, and actual water quality sample results. All designs require
+        review and sign-off by a registered professional engineer before implementation.
       </p>
     </div>
   );
