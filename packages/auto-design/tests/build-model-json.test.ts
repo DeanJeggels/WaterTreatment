@@ -53,6 +53,25 @@ describe('buildModelJson — Stage 6 model data', () => {
     if (water) expect(water.velocity_ms).toBeLessThanOrEqual(2.5);
   });
 
+  it('resolves from/to nozzles to REAL nozzle ids on the source/target (no dangling port ids)', () => {
+    const eqById = new Map(m.equipment.map((e) => [e.equipmentId, e]));
+    for (const p of m.pipework) {
+      const from = eqById.get(p.from_equipment);
+      const to = eqById.get(p.to_equipment);
+      // the resolved nozzle id must exist on the respective equipment's nozzle schedule
+      if (from && from.nozzles.length) expect(from.nozzles.some((n) => n.id === p.from_nozzle)).toBe(true);
+      if (to && to.nozzles.length) expect(to.nozzles.some((n) => n.id === p.to_nozzle)).toBe(true);
+      // never a logical port id
+      expect(['in', 'out', 'recycle', 'air', 'permeate', 'dose']).not.toContain(p.to_nozzle);
+    }
+  });
+
+  it('skid-mounted equipment reports its housing via parent_container', () => {
+    const sm = build({ ...defaultMleMbrInputs(), installationType: 'open_frame_skid' });
+    const housed = sm.equipment.filter((e) => e.parent_container);
+    expect(housed.length).toBeGreaterThan(0);
+  });
+
   it('connections reference a real pipe id, internals link nested objects', () => {
     const pipeIds = new Set(m.pipework.map((p) => p.id));
     for (const e of m.equipment) for (const c of e.connections) if (c.pipe_id) expect(pipeIds.has(c.pipe_id)).toBe(true);
