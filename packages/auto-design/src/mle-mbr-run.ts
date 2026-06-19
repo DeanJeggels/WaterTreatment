@@ -91,6 +91,12 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
       ...zoneResult.rulesApplied,
     ],
   };
+  // Violation messages were built pre-enrichment (raw tags); remap to equipment ids.
+  if (opt.selected.hardViolations.length) {
+    const tagToEq = new Map(objects.filter((o) => o.mechanical).map((o) => [o.tag, o.mechanical!.equipmentId]));
+    const remap = (msg: string): string => { let m = msg; for (const [tag, eq] of tagToEq) m = m.split(tag).join(eq); return m; };
+    for (const v of plantLayout.violations) if (v.code === 'LAYOUT_HARD') v.message = remap(v.message);
+  }
 
   // The MBR cassette is snapped to the aeration parent's footprint (nested inside).
   if (cassette) {
@@ -165,7 +171,7 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
       footprintM2: c.metrics.footprintM2, footprintUsedPct: c.metrics.footprintUsedPct, maintenanceAccess: c.metrics.maintenanceAccess,
       tradeoffs: c.tradeoffs, bestForPriority: c.bestForPriority, clearanceCompromises: c.clearanceCompromises,
     })),
-    modelJson: buildModelJson(objects, design, input) as unknown as Record<string, unknown>,
+    modelJson: buildModelJson(objects, design, input, { corridors: zoneResult.corridors }) as unknown as Record<string, unknown>,
   };
 
   return { design, objects, package: parseDesignPackage(pkg) };

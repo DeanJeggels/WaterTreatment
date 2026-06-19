@@ -68,7 +68,7 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         </p>
       </Section>
 
-      <Section n={2} title="Basis of design">
+      <Section n={2} title="Basis of design (flows, influent quality, effluent targets, site conditions)">
         <div className="grid grid-cols-2 gap-6">
           <T head={['Flow', 'm³/d']} rows={[['ADWF', d.flows.adwf], ['AWWF', d.flows.awwf], ['PDWF', d.flows.pdwf], ['PWWF', d.flows.pwwf]]} />
           <T head={['Influent', 'mg/L']} rows={[['COD', i.COD], ['BOD', i.BOD], ['TKN', i.TKN], ['FSA', i.FSA], ['TP', i.TP], ['OP', i.OP], ['TSS', i.TSS], ['ISS', i.ISS], ['FOG', i.FOG], ['Alkalinity', i.alkalinity]]} />
@@ -131,7 +131,7 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         ]} />
       </Section>
 
-      <Section n={7} title="Equipment list">
+      <Section n={7} title="Equipment list (full tagged list with duties and key dimensions)">
         <T head={['ID', 'Tag', 'Description', 'Duty/standby', 'L×W×H mm', 'Weight kg', 'Vendor']} rows={detailed.map((o) => {
           const m = o.mechanical!;
           const dm = m.dimensionsMm;
@@ -148,7 +148,7 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         ])} />
       </Section>
 
-      <Section n={9} title="Mechanical layout description">
+      <Section n={9} title="Mechanical layout description (selected optimised layout)">
         <p className="mb-1 text-xs">The selected optimised layout applies these installation-type and orientation rules:</p>
         <ul className="ml-4 list-disc text-xs leading-relaxed">
           {pkg.layout.rulesApplied.filter((r) => r.rule && r.rule.length > 30).map((r, k) => (<li key={k}>{r.rule}</li>))}
@@ -191,7 +191,7 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         ]} />
       </Section>
 
-      <Section n={12} title="Design summary">
+      <Section n={12} title="Design summary (consolidated key outputs)">
         <T head={['Parameter', 'Value', 'Unit']} rows={[
           ['Process', d.process.config + (d.mbr.included ? ' + MBR' : ''), ''],
           ['ADWF', d.flows.adwf, 'm³/d'],
@@ -208,7 +208,7 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
         ]} />
       </Section>
 
-      <Section n={13} title="Standards compliance">
+      <Section n={13} title="Standards compliance table (mechanical and civil)">
         <p className="mb-1 text-xs">Mechanical &amp; civil standards enforced on this design:</p>
         <ul className="ml-4 list-disc text-[10px] leading-relaxed">{STANDARDS.map((s, k) => (<li key={k}>{s}</li>))}</ul>
         <p className="mb-1 mt-3 text-xs">Per-item compliance check — <span className="font-semibold text-green-700">{passN} pass</span>{warnN ? <span className="font-semibold text-amber-700"> · {warnN} warn</span> : null}{failN ? <span className="font-semibold text-red-700"> · {failN} fail</span> : null}:</p>
@@ -228,6 +228,13 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
           <p className="text-[10px] text-gray-500">Model data is available via the JSON export.</p>
         )}
       </Section>
+
+      {pkg.layout.violations.length > 0 && (
+        <div className="mb-4 rounded border border-red-400 bg-red-50 p-3 text-xs text-red-900 break-inside-avoid">
+          <div className="mb-1 font-semibold">Layout compliance — {pkg.layout.violations.length} item(s) require attention:</div>
+          {pkg.layout.violations.map((v, k) => (<div key={k}>{v.severity === 'error' ? '✗' : '⚠'} {v.message}</div>))}
+        </div>
+      )}
 
       {d.warnings.length > 0 && (
         <div className="mb-4 rounded border border-amber-400 bg-amber-50 p-3 text-xs text-amber-900">
