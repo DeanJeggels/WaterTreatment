@@ -120,6 +120,20 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
           return [m.equipmentId, o.tag, o.label, m.dutyStandby.configuration, `${dm.lengthMm ?? '—'}×${dm.widthMm ?? '—'}×${dm.heightMm ?? '—'}`, dm.weightKg ?? '—', m.vendor];
         })} />
         <p className="mt-2 text-[10px] text-gray-500">Full nozzle schedules, accessories and maintenance clearances per item are in the design data model (Appendix / JSON export). Vendor/model are indicative pending procurement.</p>
+        <div className="mt-4">
+          <h3 className="mb-1 text-sm font-semibold">Mechanical layout &amp; orientation</h3>
+          <ul className="ml-4 list-disc text-xs leading-relaxed">
+            {pkg.layout.rulesApplied.filter((r) => r.rule && r.rule.length > 30).map((r, i) => (<li key={i}>{r.rule}</li>))}
+          </ul>
+          {pkg.objects.some((o) => o.ext?.orientation) && (
+            <table className="mt-2 w-full text-xs">
+              <thead><tr><th className="border-b border-black/30 py-1 pr-3 text-left font-semibold">Equipment</th><th className="border-b border-black/30 py-1 pr-3 text-left font-semibold">Orientation</th></tr></thead>
+              <tbody>{pkg.objects.filter((o) => o.ext?.orientation).map((o, i) => (
+                <tr key={i}><td className="border-b border-black/10 py-1 pr-3 align-top">{o.mechanical?.equipmentId ?? o.tag}</td><td className="border-b border-black/10 py-1 pr-3 align-top">{String(o.ext!.orientation)}</td></tr>
+              ))}</tbody>
+            </table>
+          )}
+        </div>
       </Section>
 
       <Section n={8} title="Tank sizing (two layout options)">
