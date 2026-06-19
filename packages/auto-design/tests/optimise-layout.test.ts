@@ -73,6 +73,24 @@ describe('optimiseLayout — Stage 5', () => {
     expect(a.selected.key).toBe(b.selected.key);
     expect(a.candidates.map((c) => c.score)).toEqual(b.candidates.map((c) => c.score));
   });
+
+  it('never moves container-housed equipment outside the container envelope', () => {
+    const cInput = { ...defaultMleMbrInputs(), installationType: 'container_40ft' as const, footprintLengthM: 120, footprintWidthM: 90 };
+    const { design: cDesign, placeable: cPlaceable } = build(cInput);
+    const res = optimiseLayout(cPlaceable, cInput, cDesign);
+    const container = res.container!;
+    expect(container).toBeDefined();
+    const cx = container.placement.location.x, halfL = container.geometry.footprint.lengthM / 2;
+    const cy = container.placement.location.y, halfW = container.geometry.footprint.widthM / 2;
+    // every candidate's housed equipment stays within the container footprint (+0.3 m tol)
+    for (const cand of res.candidates) {
+      const housed = cand.objects.filter((o) => o.ext?.parentContainer);
+      for (const h of housed) {
+        expect(Math.abs(h.placement.location.x - cx)).toBeLessThanOrEqual(halfL + 0.3);
+        expect(Math.abs(h.placement.location.y - cy)).toBeLessThanOrEqual(halfW + 0.3);
+      }
+    }
+  });
 });
 
 describe('Stage 5 through the run path', () => {

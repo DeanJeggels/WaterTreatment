@@ -80,7 +80,10 @@ export function runMleMbr(input: MleMbrInputs, meta: MleMbrRunMeta): MleMbrRunRe
     corridors: zoneResult.corridors,
     bunds: zoneResult.bunds,
     pipeRoutes: zoneResult.pipeRoutes,
-    violations: zoneResult.violations,
+    violations: [
+      ...zoneResult.violations,
+      ...opt.selected.hardViolations.map((message) => ({ code: 'LAYOUT_HARD', message, severity: 'error' as const })),
+    ],
     rulesApplied: [
       ...opt.appliedRules.map((rule) => ({ rule })),
       { rule: `Layout optimisation: selected "${opt.selected.label}" of ${opt.candidates.length} candidate(s) — score ${opt.selected.score}, ${opt.selected.metrics.maintenanceAccess} maintenance access, footprint ${opt.selected.metrics.footprintM2} m² (${opt.selected.metrics.footprintUsedPct}% of plot).`, detail: `weights: ${JSON.stringify(opt.weights)}` },
