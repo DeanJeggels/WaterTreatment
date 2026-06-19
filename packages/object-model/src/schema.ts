@@ -383,6 +383,7 @@ export const designPackageSchema = z.object({
   totals: packageTotalsSchema,
   provenance: packageProvenanceSchema,
   mleMbr: z.record(z.string(), z.unknown()).optional(),
+  layoutOptions: z.array(z.record(z.string(), z.unknown())).optional(),
 });
 
 /** Parse + validate an unknown value into an EngineeringObject (throws on invalid). */

@@ -134,6 +134,19 @@ export function MleMbrReport({ pkg }: { pkg: DesignPackage }) {
             </table>
           )}
         </div>
+        {Array.isArray(pkg.layoutOptions) && pkg.layoutOptions.length > 0 && (() => {
+          const opts = pkg.layoutOptions as Array<Record<string, unknown>>;
+          return (
+            <div className="mt-4">
+              <h3 className="mb-1 text-sm font-semibold">Layout options (Stage 5 optimisation)</h3>
+              <T head={['Option', 'Footprint m²', '% plot', 'Pipe m', 'Bends', 'Cross', 'Access', 'Score', 'Sel.']} rows={opts.map((o) => [String(o.label), Number(o.footprintM2), Number(o.footprintUsedPct), Number(o.pipeLengthM), Number(o.bendCount), Number(o.crossingCount), String(o.maintenanceAccess), Number(o.score), o.selected ? '✓' : ''])} />
+              <ul className="ml-4 mt-1 list-disc text-[10px] leading-relaxed text-gray-600">
+                {opts.map((o, i) => (<li key={i}><span className="font-semibold">{String(o.label)}:</span> {String(o.arrangementLogic)} <span className="italic">Trade-offs:</span> {String(o.tradeoffs)} Best for {String(o.bestForPriority)}. Clearances: {String(o.clearanceCompromises)}.</li>))}
+              </ul>
+              <p className="mt-1 text-[10px] text-gray-500">Lower score = better for the selected client priority. The selected option drives the persisted layout, 2D plan and 3D model; process parameters, equipment specs and pipe sizes are locked — only positions/orientations vary between options.</p>
+            </div>
+          );
+        })()}
       </Section>
 
       <Section n={8} title="Tank sizing (two layout options)">
