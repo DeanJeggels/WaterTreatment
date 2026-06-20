@@ -50,6 +50,14 @@ function toBasis(input: MleMbrInputs): MleMbrBasis {
     mbrRequired: input.mbrRequired,
     membraneModel: input.membraneModel,
     landUse: input.landUse,
+    // Selected reactor parameters feed the deterministic volume calc (tank sizes
+    // are computed from these — never entered). Defaults are the recommended values.
+    overrides: {
+      sludgeAgeDays: input.sludgeAgeDays,
+      mlssMgL: input.reactorMlssMgL,
+      aRecycle: input.aRecycleRatio,
+      volumeSafetyFactor: input.volumeSafetyFactor,
+    },
   };
 }
 

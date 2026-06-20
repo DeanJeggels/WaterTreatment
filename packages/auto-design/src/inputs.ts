@@ -151,6 +151,13 @@ export interface MleMbrInputs {
   containerStacking: boolean;
   clientPriority: ClientPriority;
   siteBoundary?: Array<{ x: number; y: number }>;
+  // --- process basis (Excel "2. Reactor Configuration → Selected Reactor Parameters").
+  //     The reactor/MBR/anoxic/EQ tank VOLUMES are CALCULATED from these + the flow;
+  //     they are NEVER entered directly. These carry the recommended defaults. ---
+  sludgeAgeDays: number;
+  reactorMlssMgL: number;
+  aRecycleRatio: number;
+  volumeSafetyFactor: number;
 }
 
 export function defaultMleMbrInputs(): MleMbrInputs {
@@ -175,5 +182,9 @@ export function defaultMleMbrInputs(): MleMbrInputs {
     tankPlacement: 'above_ground',
     containerStacking: false,
     clientPriority: 'best_access',
+    sludgeAgeDays: 20,
+    reactorMlssMgL: 12000,
+    aRecycleRatio: 4,
+    volumeSafetyFactor: 1.25,
   };
 }
