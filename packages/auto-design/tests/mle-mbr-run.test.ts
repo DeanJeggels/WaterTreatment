@@ -47,4 +47,28 @@ describe('runMleMbr (end-to-end design path)', () => {
   it('is deterministic', () => {
     expect(JSON.stringify(runMleMbr(inputs(), META).package)).toBe(JSON.stringify(runMleMbr(inputs(), META).package));
   });
+
+  it('CALCULATES tank volumes from the inputs — they are never user-entered', () => {
+    const d = runMleMbr(inputs(), META).design;
+    // reactor/anoxic/aerobic volumes are computed, > 0, and consistent (Vt ≈ Va + Vax)
+    expect(d.reactor.volumeSelectedM3).toBeGreaterThan(0);
+    expect(d.reactor.aerobicVolumeM3).toBeGreaterThan(0);
+    expect(d.reactor.anoxicVolumeM3).toBeGreaterThan(0);
+    expect(d.reactor.aerobicVolumeM3 + d.reactor.anoxicVolumeM3).toBeCloseTo(d.reactor.volumeSelectedM3, 0);
+    // EQ / buffer tank = 0.5 × ADWF (12 h holding) — the master rule
+    const eq = d.tanks.find((t) => /buffer|equalis/i.test(t.name))!;
+    expect(eq.volumeM3).toBeCloseTo(0.5 * inputs().adwfM3d, 1);
+  });
+
+  it('the selected reactor parameters drive the calculated volume (higher MLSS → smaller reactor)', () => {
+    const lowMlss = { ...inputs(), reactorMlssMgL: 8000 };
+    const highMlss = { ...inputs(), reactorMlssMgL: 12000 };
+    const vLow = runMleMbr(lowMlss, META).design.reactor.volumeSelectedM3;
+    const vHigh = runMleMbr(highMlss, META).design.reactor.volumeSelectedM3;
+    expect(vHigh).toBeLessThan(vLow); // V = MXt / MLSS — higher MLSS shrinks the tank
+    // longer sludge age → more sludge mass → larger reactor
+    const vYoung = runMleMbr({ ...inputs(), sludgeAgeDays: 15 }, META).design.reactor.volumeSelectedM3;
+    const vOld = runMleMbr({ ...inputs(), sludgeAgeDays: 25 }, META).design.reactor.volumeSelectedM3;
+    expect(vOld).toBeGreaterThan(vYoung);
+  });
 });

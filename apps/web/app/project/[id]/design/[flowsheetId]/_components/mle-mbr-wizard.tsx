@@ -34,6 +34,8 @@ export function MleMbrWizard({ initialName, initialClient, initialLocation, onSu
     if (!(v.codMgL > 0)) e.push('Influent COD must be greater than 0.');
     if (!(v.tminC < v.tmaxC)) e.push('Minimum temperature must be below maximum.');
     if (!(v.footprintLengthM > 0 && v.footprintWidthM > 0)) e.push('Site footprint length and width must be greater than 0.');
+    if (!(v.sludgeAgeDays > 0)) e.push('Sludge age must be greater than 0.');
+    if (!(v.reactorMlssMgL > 0)) e.push('Reactor MLSS must be greater than 0.');
     return e;
   }, [v]);
 
@@ -113,6 +115,19 @@ export function MleMbrWizard({ initialName, initialClient, initialLocation, onSu
             {check(v.phosphorusRemoval, 'Phosphorus removal required', (b) => set({ phosphorusRemoval: b }))}
             {check(v.mbrRequired, 'MBR required (membranes inside the aeration tank)', (b) => set({ mbrRequired: b }))}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Process basis (recommended defaults)</CardTitle>
+          <CardDescription>The anoxic, aeration/MBR, anoxic and EQ tank volumes are <span className="font-medium">calculated</span> from these + the flow — never entered. Matches the Excel &ldquo;Selected Reactor Parameters&rdquo;.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Field label="Sludge age (days)">{num(v.sludgeAgeDays, (n) => set({ sludgeAgeDays: n }))}</Field>
+          <Field label="Reactor MLSS (mg/L)">{num(v.reactorMlssMgL, (n) => set({ reactorMlssMgL: n }), 100)}</Field>
+          <Field label="a-recycle ratio (×Q)">{num(v.aRecycleRatio, (n) => set({ aRecycleRatio: n }), 0.5)}</Field>
+          <Field label="Volume safety factor">{num(v.volumeSafetyFactor, (n) => set({ volumeSafetyFactor: n }), 0.05)}</Field>
         </CardContent>
       </Card>
 
