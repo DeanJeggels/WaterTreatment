@@ -1,6 +1,7 @@
 // Types
 export type {
   WaterQuality,
+  Stream,
   ProcessResult,
   ProcessUnit,
   HandleDef,
@@ -53,6 +54,24 @@ export { simulate } from './graph/simulator';
 export { topologicalSort } from './graph/topological-sort';
 export type { GraphNode, GraphEdge } from './graph/topological-sort';
 
+// Plant-wide mass-balance ledger (Phase 2 acceptance) + MLE/MBR train delegate
+export { computeMassBalanceLedger } from './graph/mass-balance';
+export type { ComponentBalance, NodeLedger, PlantClosure, MassBalanceLedger } from './graph/mass-balance';
+export { recogniseMleTrain, basisFromTrain, delegateMleDesign } from './graph/recognise-mle-train';
+export type { RecognisedTrain, TrainBasisOverrides } from './graph/recognise-mle-train';
+
+// Headless plant-evaluation engine (Phase 3 seam for the optimizer)
+export { evaluatePlant } from './engine/evaluate';
+export type { GraphDefinition, EvaluateOptions, PlantEvaluation } from './engine/evaluate';
+
+// NSGA-II topology + sizing optimizer (Phase 4)
+export { optimizePlant } from './optimize/nsga2';
+export type { OptimizeOptions, OptimizeResult, ParetoPoint } from './optimize/nsga2';
+export { decodeVars, decodeToGraph, GENOME_LENGTH } from './optimize/genome';
+export type { OptimizerSpec, DecisionVars } from './optimize/genome';
+export { evaluateObjectives } from './optimize/objectives';
+export type { Objectives } from './optimize/objectives';
+
 import { topologicalSort as _topologicalSort } from './graph/topological-sort';
 import type { GraphNode as _GraphNode, GraphEdge as _GraphEdge } from './graph/topological-sort';
 
@@ -80,6 +99,10 @@ export type {
   TankOption,
   SizedTank,
 } from './design/mle-mbr';
+
+// Shared engineering kernels (single source of truth, used by both the
+// MLE-MBR design generator and the flowsheet block models)
+export * from './kernels';
 
 // BoQ engine
 export { aggregateBoQ } from './boq/aggregator';

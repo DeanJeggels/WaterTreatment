@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { useSubscription } from '@/lib/hooks/use-subscription';
 import { useFlowsheetStore } from '@/stores/flowsheet-store';
 import { ErrorBoundary } from '@/components/error-boundary';
+import OptimizerDialog from '@/components/optimizer/OptimizerDialog';
 
 export default function FlowsheetEditorPage() {
   const params = useParams<{ id: string; flowsheetId: string }>();
@@ -196,6 +197,7 @@ export default function FlowsheetEditorPage() {
               )}
               <span className="hidden md:inline">Run Simulation</span>
             </Button>
+            <OptimizerDialog />
             <Button
               variant="outline"
               size="sm"
@@ -221,7 +223,7 @@ export default function FlowsheetEditorPage() {
           </ErrorBoundary>
 
           {/* Inspector — permanent rail on lg+, Sheet trigger below lg */}
-          <div className="hidden lg:block">
+          <div className="hidden lg:block h-full">
             <InspectorPanel />
           </div>
           <Sheet>

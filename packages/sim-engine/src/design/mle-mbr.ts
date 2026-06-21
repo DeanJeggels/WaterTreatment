@@ -11,6 +11,10 @@
  * by overriding MLSS/anoxic-fraction.
  */
 import type { CalculationRecord } from '../types/calculation-record';
+import {
+  fractionateCod, kineticsAtT, sludgeMasses, reactorSizing,
+  nitrogenBalance, oxygenDemand, aerationTransfer, membraneSizing,
+} from '../kernels';
 
 export type DischargeStandard = 'General' | 'Special';
 export type MembraneModel = 'megavision' | 'memstar';
@@ -155,28 +159,8 @@ const round = (x: number, dp = 3): number => {
   return Math.round(x * f) / f;
 };
 const ceil = Math.ceil;
-/** DO saturation (mg/L) at sea level (APHA polynomial). */
-function doSat(tC: number): number {
-  return 14.652 - 0.41022 * tC + 0.0079910 * tC * tC - 0.000077774 * tC * tC * tC;
-}
-/** Standard-atmosphere site pressure (kPa) from elevation (m). */
-function sitePressureKpa(elevationM: number): number {
-  return (101325 * (1 - 2.25577e-5 * elevationM) ** 5.25588) / 1000;
-}
-/** SOTE (%) interpolated from diffuser depth — xlsm sheet 6 estimate column. */
-function interpSote(depthM: number): number {
-  const table: Array<[number, number]> = [
-    [2, 11.5], [2.5, 15.8], [3, 19.5], [3.3, 21.3], [4, 25.2], [5, 30], [6, 34],
-  ];
-  if (depthM <= table[0]![0]) return table[0]![1];
-  if (depthM >= table[table.length - 1]![0]) return table[table.length - 1]![1];
-  for (let i = 1; i < table.length; i++) {
-    const [d1, s1] = table[i]!;
-    const [d0, s0] = table[i - 1]!;
-    if (depthM <= d1) return s0 + ((depthM - d0) / (d1 - d0)) * (s1 - s0);
-  }
-  return table[table.length - 1]![1];
-}
+// DO saturation, site pressure and SOTE-from-depth now live in the shared
+// kernels (wastewater.ts / aeration.ts) and are used via aerationTransfer().
 
 const rec = (
   label: string,
@@ -254,14 +238,10 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
     TKN, FSA: TKN * k.fsaPerTkn, TP, OP: TP * k.opPerTp, TSS, ISS: TSS * k.issPerTss, FOG: COD * k.fogPerCod,
     alkalinity: k.alkalinityMgL, pH: 7.5,
   };
-  const soluble = influent.CODfiltered;
-  const USO = k.fSus * COD;
-  const BSO = soluble - USO;
-  const UPO = k.fSup * COD;
-  const particulate = COD - soluble;
-  const BPO = particulate - UPO;
-  const totalBiodeg = BSO + BPO;
-  const totalUnbiodeg = USO + UPO;
+  const frac = fractionateCod(COD, { fSup: k.fSup, fSus: k.fSus, codFilteredFraction: k.codFilteredFraction });
+  const { USO, BSO, UPO, BPO } = frac;
+  const totalBiodeg = frac.totalBiodegradable;
+  const totalUnbiodeg = frac.totalUnbiodegradable;
   const fractionation: CodFractionation = {
     USO: round(USO, 1), BSO: round(BSO, 1), UPO: round(UPO, 1), BPO: round(BPO, 1),
     totalBiodegradable: round(totalBiodeg, 1), totalUnbiodegradable: round(totalUnbiodeg, 1), fSbs: round(BSO / totalBiodeg, 4),
@@ -276,88 +256,98 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
 
   // ---- [3] Kinetics @ Tmin ----
   const T = basis.tminC;
-  const muAmT = k.muAm20 * 1.123 ** (T - 20);
-  const KnT = k.Kn20 * 1.123 ** (T - 20);
-  const bAT = k.bA20 * 1.029 ** (T - 20);
-  const Yhv = k.YH / k.fcv;
-  const bHTmin = 0.24 * 1.029 ** (T - 20);
-  const C28 = (Yhv * Rs) / (1 + Rs * bHTmin); // (YH·Rs)/(1+bhT·Rs)
+  const kin = kineticsAtT(
+    { muAm20: k.muAm20, Kn20: k.Kn20, bA20: k.bA20, YH: k.YH, fcv: k.fcv, bH20: 0.24 },
+    T, Rs,
+  );
+  const { muAmT, KnT, bAT, Yhv } = kin;
+  const bHTmin = kin.bHT;
+  const C28 = kin.C28; // (YH·Rs)/(1+bhT·Rs)
 
   // ---- [4] Sludge masses ----
-  const FSi = (COD * Q) / 1000;
-  const FSbi = (totalBiodeg * Q) / 1000;
-  const FXii = (influent.TSS * k.issPerTss * Q) / 1000;
-  const Mbh = FSbi * C28;
-  const Mxeh = k.fH * bHTmin * Rs * Mbh;
-  const MXI = ((k.fSup * FSi) / k.fcv) * Rs;
-  const MXv = MXI + Mxeh + Mbh;
-  const MXIO = FXii * Rs + k.fiOHO * Mbh;
-  const MXt = MXIO + MXv;
+  const masses = sludgeMasses(
+    { fSup: k.fSup, fcv: k.fcv, fH: k.fH, fiOHO: k.fiOHO },
+    { COD, totalBiodegradable: totalBiodeg, ISS: influent.ISS, flow: Q },
+    Rs, kin,
+  );
+  const { FSi, FSbi, FXii, Mbh, Mxeh, MXI, MXv, MXIO, MXt } = masses;
   records.push(rec('Biomass in reactor', 'Mbh', 'Mbh = FSbi × (YH·Rs)/(1+bhT·Rs)', { FSbi: { value: FSbi, unit: 'kgCOD/d', source: 'computed' }, factor: { value: C28, unit: '', source: 'kinetics' } }, Mbh, 'kgVSS'));
   records.push(rec('Total TSS in reactor', 'MXt', 'MXt = MXIO + MXv', { MXIO: { value: MXIO, unit: 'kgISS', source: 'computed' }, MXv: { value: MXv, unit: 'kgVSS', source: 'computed' } }, MXt, 'kgTSS'));
 
   // ---- [4/5] Reactor volume + sizing ----
-  const Vmin = (MXt / k.mlssMgL) * 1000;
-  const hrtTotal = (Vmin / Q) * 24;
-  const Qw = Vmin / Rs;
-  const FXw = (Qw * k.mlssMgL) / 1000;
-  const Vt = Vmin * k.volumeSafetyFactor;
-  const fxt = config === 'aerobic' ? 0 : k.anoxicMassFraction;
-  const fan = config === 'A2O_UCT' ? 0.1 : 0; // simple anaerobic fraction for EBPR
-  const Va = Vt * (1 - fxt - fan);
-  const Vax = Vt * fxt;
-  const Van = Vt * fan;
+  const sizing = reactorSizing(
+    { mlssMgL: k.mlssMgL, volumeSafetyFactor: k.volumeSafetyFactor, anoxicMassFraction: k.anoxicMassFraction },
+    masses, Q, Rs, config,
+  );
+  const Vmin = sizing.volumeMinM3;
+  const hrtTotal = sizing.hrtTotalH;
+  const Qw = sizing.wasM3d;
+  const FXw = sizing.wasKgTssD;
+  const Vt = sizing.volumeSelectedM3;
+  const { fxt, fan } = sizing;
+  const Va = sizing.aerobicVolumeM3;
+  const Vax = sizing.anoxicVolumeM3;
+  const Van = sizing.anaerobicVolumeM3;
   records.push(rec('Total reactor volume (min)', 'Vmin', 'Vmin = MXt / MLSS × 1000', { MXt: { value: MXt, unit: 'kgTSS', source: 'computed' }, MLSS: { value: k.mlssMgL, unit: 'mg/L', source: 'default' } }, Vmin, 'm3'));
   records.push(rec('Total reactor volume (selected)', 'Vt', 'Vt = Vmin × safety', { Vmin: { value: Vmin, unit: 'm3', source: 'computed' }, safety: { value: k.volumeSafetyFactor, unit: '', source: 'default' } }, Vt, 'm3'));
   records.push(rec('Sludge waste rate', 'Qw', 'Qw = Vmin / Rs', { Vmin: { value: Vmin, unit: 'm3', source: 'computed' }, Rs: { value: Rs, unit: 'd', source: 'default' } }, Qw, 'm3/d'));
 
   // ---- [4] Nitrogen balance ----
-  const Ns = (k.fnUPO * MXv) / (Q * Rs) * 1000;
-  const bRecip = bAT + 1 / Rs;
-  const Nae = (KnT * bRecip) / (muAmT * (1 - fxt) - bRecip);
+  const nbal = nitrogenBalance(
+    { fnUPO: k.fnUPO, alkalinityMgL: influent.alkalinity, aRecycle: k.aRecycle, sRecycle: k.sRecycle },
+    { TKN: influent.TKN, MXv, flow: Q, srtDays: Rs, config, nitrogenRemoval: basis.nitrogenRemoval },
+    kin, fxt,
+  );
+  const Ns = nbal.Ns;
+  const Nae = nbal.ammoniaMgL;
   const USOrgN = 2; // typical unbiodegradable soluble organic N (xlsm Nousi)
-  const TKNe = Math.max(Nae, 0) + USOrgN;
-  const Nc = basis.nitrogenRemoval ? Math.max(0, influent.TKN - Ns - TKNe) : 0;
-  const Nne = config === 'aerobic' ? Nc : Nc / (k.aRecycle + k.sRecycle + 1);
+  const TKNe = nbal.tknMgL;
+  const Nc = nbal.nitrificationCapacity;
+  const Nne = nbal.nitrateMgL;
   const nRemovalPct = basis.nitrogenRemoval ? ((influent.TKN - (USOrgN + Nne + Nae)) / influent.TKN) * 100 : 0;
-  const alkConsumed = 7.14 * Nc;
-  const alkRecovered = 3.57 * (Nc - Nne);
-  const effAlk = influent.alkalinity - alkConsumed + alkRecovered + 32;
+  const alkConsumed = nbal.alkConsumed;
+  const alkRecovered = nbal.alkRecovered;
+  const effAlk = nbal.effluentAlkalinityMgL;
   if (effAlk < 40) warnings.push(`Effluent alkalinity ${round(effAlk, 0)} mg/L < 40 — lime dosing may be required to prevent bulking.`);
   records.push(rec('Effluent ammonia', 'Nae', 'Nae = KnT(bAT+1/Rs) / (μAmT(1-fxt) - (bAT+1/Rs))', { KnT: { value: KnT, unit: 'mgN/L', source: 'kinetics' }, muAmT: { value: muAmT, unit: '1/d', source: 'kinetics' } }, Nae, 'mgN/L'));
   records.push(rec('Effluent nitrate', 'Nne', 'Nne = Nc / (a+s+1)', { Nc: { value: Nc, unit: 'mgN/L', source: 'computed' }, a: { value: k.aRecycle, unit: '', source: 'default' } }, Nne, 'mgNO3/L'));
 
   // ---- [7] MBR (before aeration: scour O2 credits aeration) ----
   const m = MEMBRANES[basis.membraneModel];
-  const flowToTreat = (awwf * k.mbrMembranePeakFactor) / k.mbrOpDurationH; // m³/hr
-  const membraneAreaReq = (flowToTreat * 1000) / m.fluxLmh; // m²
-  const moduleCount = basis.mbrRequired ? Math.max(1, ceil(membraneAreaReq / m.nominalModuleAreaM2)) : 0;
-  const moduleArea = moduleCount > 0 ? membraneAreaReq / moduleCount : 0;
-  const Ps = 101.33;
-  const Pb = sitePressureKpa(basis.elevationM);
-  const am3hFactor = (Ps / Pb) * ((273 + 25) / 273);
-  const scourNm3h = basis.mbrRequired
-    ? (basis.membraneModel === 'megavision' ? (m.scourCoeff * membraneAreaReq) / 1000 * 60 : m.scourCoeff * moduleCount)
-    : 0;
+  // Site air-transfer correction (shared by the MBR scour and the aeration math).
+  const transfer = aerationTransfer(
+    { alpha: k.alpha, beta: k.beta, foulingFactor: k.foulingFactor, diffuserDepthM: k.diffuserDepthM, minDOmgL: k.minDOmgL },
+    T, basis.elevationM,
+  );
+  const am3hFactor = transfer.am3hFactor;
+  const mbrSizing = membraneSizing(
+    { fluxLmh: m.fluxLmh, scourCoeff: m.scourCoeff, scourByArea: basis.membraneModel === 'megavision', nominalModuleAreaM2: m.nominalModuleAreaM2 },
+    { membranePeakFactor: k.mbrMembranePeakFactor, opDurationH: k.mbrOpDurationH, diffuserDepthM: k.diffuserDepthM },
+    awwf, basis.mbrRequired,
+  );
+  const flowToTreat = mbrSizing.permeateDutyM3h; // m³/hr
+  const membraneAreaReq = mbrSizing.membraneAreaM2; // m²
+  const moduleCount = mbrSizing.moduleCount;
+  const moduleArea = mbrSizing.moduleAreaM2;
+  const scourNm3h = mbrSizing.airScourNm3h;
   const scourAm3h = scourNm3h * am3hFactor;
-  const scourTransferEff = (0.5 * k.diffuserDepthM) / 100;
-  const scourO2KgD = scourNm3h * scourTransferEff * 0.21 * 1.421 * 24;
+  const scourO2KgD = mbrSizing.scourO2CreditKgD;
   records.push(rec('MBR membrane area required', 'Am', 'Am = (flowToTreat × 1000) / flux', { flowToTreat: { value: flowToTreat, unit: 'm3/hr', source: 'AWWF×1.5/opDuration' }, flux: { value: m.fluxLmh, unit: 'LMH', source: 'membrane' } }, membraneAreaReq, 'm2'));
   records.push(rec('MBR air scour', 'Qscour', basis.membraneModel === 'megavision' ? 'Qscour = 15 × area/1000 × 60' : 'Qscour = 9 × modules', { area: { value: membraneAreaReq, unit: 'm2', source: 'computed' } }, scourNm3h, 'Nm3/hr'));
 
   // ---- [6] Aeration ----
-  const FOc = FSbi * ((1 - k.fcv * Yhv) + (k.fcv * (1 - k.fH) * bHTmin * Yhv * Rs) / (1 + bHTmin * Rs));
-  const FOn = Math.max(0, (4.57 * Q * Nc) / 1000);
-  const FOdn = Math.max(0, (2.86 * (Nc - Nne) * Q) / 1000);
-  const FOt = FOc + FOn - FOdn;
-  const sote = interpSote(k.diffuserDepthM) / 100;
-  const alphaT = k.alpha * 1.024 ** (T - 20);
-  const omega = Pb / Ps;
-  const cs20 = doSat(20) * omega;
-  const csInf = cs20 * (1 + 0.4 * (k.diffuserDepthM / 10.33));
-  const tau = doSat(T) / doSat(20);
-  const oteOverSote = ((tau * k.beta * omega * csInf - k.minDOmgL) / csInf) * 1.024 ** (T - 20) * (alphaT * k.foulingFactor);
-  const ote = oteOverSote * sote;
+  const odem = oxygenDemand(
+    { fcv: k.fcv, fH: k.fH },
+    { FSbi, flow: Q, nitrificationCapacity: Nc, nitrateMgL: Nne, srtDays: Rs },
+    kin,
+  );
+  const FOc = odem.carbonaceousKgD;
+  const FOn = odem.nitrificationKgD;
+  const FOdn = odem.denitrificationCreditKgD;
+  const FOt = odem.totalKgD;
+  const sote = transfer.soteFraction;
+  const ote = transfer.oteFraction;
+  const oteOverSote = sote > 0 ? ote / sote : 0; // for the audit record below
   const aerobicO2 = Math.max(0, FOt - scourO2KgD);
   const processAirNm3h = aerobicO2 / (0.21 * 1.421 * ote * 24);
   const processAirAm3h = processAirNm3h * am3hFactor;

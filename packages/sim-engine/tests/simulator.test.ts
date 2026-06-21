@@ -436,9 +436,10 @@ describe('Simulator: BNR-MBR with edge-based recycle', () => {
     const r = simulate(nodes, edges);
     expect(r.converged).toBe(true);
     expect(r.iterations).toBeLessThan(50);
-    // recycle edge carries ratio × influent = 4000
+    // recycle line = ratio × the local fresh influent feeding the anoxic = 4×1000
     expect(r.edgeResults['e5'].flow).toBeCloseTo(4000, 0);
-    // forward edge to MBR is tapped back to ≈ raw influent
+    // forward line downstream of the IMLR split carries the balance: the aerobic
+    // throughput (raw + IMLR = 5000) minus the recycle (4000) ≈ raw influent
     expect(r.edgeResults['e3'].flow).toBeCloseTo(1000, 0);
     // effluent ≈ raw influent (minus small MBR reject)
     expect(r.nodeResults['eff'].outputs.out!.flow).toBeGreaterThan(900);
@@ -487,7 +488,8 @@ describe('Simulator: BNR-MBR with edge-based recycle', () => {
     const r = simulate(nodes, edges);
     expect(r.converged).toBe(true);
     expect(r.iterations).toBeLessThan(50);
-    // Each recycle carries ratio × raw influent (1000), independent of the other
+    // Each recycle = ratio × the local fresh influent feeding the anoxic (1000),
+    // computed independently from that node's forward inflow (no global Q_basis)
     expect(r.edgeResults['imlr'].flow).toBeCloseTo(4000, 0);
     expect(r.edgeResults['ras'].flow).toBeCloseTo(750, 0);
   });
