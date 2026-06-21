@@ -24,6 +24,9 @@ import { ConsumablesSection } from './ConsumablesSection';
 import { CalculationRecordsSection } from './CalculationRecordsSection';
 import { BoqSection } from './BoqSection';
 import { DesignSummarySection } from './DesignSummarySection';
+import { AppliedDesignSection } from './AppliedDesignSection';
+import { MassBalanceSection } from './MassBalanceSection';
+import { DelegateSection } from './DelegateSection';
 
 export default function InspectorPanel() {
   const {
@@ -36,7 +39,7 @@ export default function InspectorPanel() {
     deleteNode,
     deleteEdge,
   } = useFlowsheetStore();
-  const { results } = useSimulationStore();
+  const { results, evaluation, appliedDesign } = useSimulationStore();
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
@@ -49,6 +52,18 @@ export default function InspectorPanel() {
 
   const recycleIds = useMemo(() => getRecycleEdgeIds(nodes, edges), [nodes, edges]);
 
+  // Plant-wide overview shown regardless of what (if anything) is selected:
+  // design summary, the headless-engine economics + mass-balance ledger, and the
+  // recognised-train delegated design.
+  const plantOverview = (
+    <>
+      <AppliedDesignSection appliedDesign={appliedDesign} />
+      <DesignSummarySection results={results} nodes={nodes} />
+      <MassBalanceSection evaluation={evaluation} nodes={nodes} />
+      <DelegateSection evaluation={evaluation} />
+    </>
+  );
+
   if (!selectedNode) {
     // Edge selected (and no node) — show the recycle ratio editor.
     if (selectedEdgeId) {
@@ -58,9 +73,9 @@ export default function InspectorPanel() {
         (selectedEdge?.data as { recycleRatio?: number } | undefined)?.recycleRatio ?? 4;
 
       return (
-        <div className="w-80 border-l border-border bg-card/30 overflow-y-auto">
+        <div className="w-80 border-l border-border bg-card/30 overflow-y-auto h-full">
           <div className="p-4 space-y-4">
-            <DesignSummarySection results={results} nodes={nodes} />
+            {plantOverview}
 
             <Separator />
 
@@ -119,9 +134,9 @@ export default function InspectorPanel() {
     }
 
     return (
-      <div className="w-80 border-l border-border bg-card/30 overflow-y-auto">
+      <div className="w-80 border-l border-border bg-card/30 overflow-y-auto h-full">
         <div className="p-4 space-y-4">
-          <DesignSummarySection results={results} nodes={nodes} />
+          {plantOverview}
           <EmptyState
             icon={MousePointer2}
             title="No unit selected"
@@ -176,7 +191,7 @@ export default function InspectorPanel() {
   );
 
   return (
-    <div className="w-80 border-l border-border bg-card/30 overflow-y-auto">
+    <div className="w-80 border-l border-border bg-card/30 overflow-y-auto h-full">
       <div className="p-4 space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
@@ -199,7 +214,7 @@ export default function InspectorPanel() {
         <Separator />
 
         {/* Plant-wide Design Summary — visible regardless of selected node */}
-        <DesignSummarySection results={results} nodes={nodes} />
+        {plantOverview}
 
         {/* Warnings first — impossible to miss */}
         <WarningsSection warnings={nodeResult?.warnings} />

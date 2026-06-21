@@ -14,7 +14,18 @@ export { defaultPlantContext } from './types/plant-context';
 export type { UnitOutputs } from './types/unit-outputs';
 export { emptyUnitOutputs } from './types/unit-outputs';
 
-/** Water quality vector carried by every stream in the flowsheet */
+/**
+ * The canonical Stream: the single, uniform data structure that flows between
+ * every block on the flowsheet. Carries the volumetric flow plus the state
+ * variables the process models need (COD/BOD/N/P/solids/alkalinity/temperature).
+ *
+ * Contract (Phase 1a): every block input and every block output is a value of
+ * this exact shape — no block may invent its own input format. Streams are
+ * treated as IMMUTABLE: blocks read their inputs and return freshly-constructed
+ * output objects; they never mutate an input stream in place. Use the
+ * `emptyWaterQuality()` factory to start a stream and `mixStreams()` to combine
+ * streams at a junction (flow-weighted).
+ */
 export interface WaterQuality {
   flow: number;        // m³/d
   COD: number;         // mg/L total COD
@@ -31,6 +42,13 @@ export interface WaterQuality {
   DO: number;          // mg/L dissolved oxygen
   temperature: number; // °C
 }
+
+/**
+ * Canonical name for a connected flowsheet stream. Alias of {@link WaterQuality}
+ * so the codebase can speak the brief's "Stream" vocabulary without a parallel
+ * type. Every edge in the graph carries one Stream.
+ */
+export type Stream = WaterQuality;
 
 /**
  * Result from processing a unit — the existing `outputs` and `metadata`

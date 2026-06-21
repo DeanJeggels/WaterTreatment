@@ -1,6 +1,7 @@
 import type { ProcessUnit, ProcessResult, WaterQuality, UnitDefinition, ParameterField } from '../types';
 import { mixStreams, emptyWaterQuality, emptyUnitOutputs } from '../types';
 import { getPrice } from '@repo/design-library';
+import { surfaceOverflowRateMph, solidsLoadingRateKgM2h } from '../kernels';
 
 const parameterSchema: ParameterField[] = [
   { key: 'surface_area', label: 'Surface Area', unit: 'm²', min: 50, max: 10000, step: 50, defaultValue: 800 },
@@ -83,11 +84,10 @@ export class SecondaryClarifier implements ProcessUnit {
     const depth = p.depth ?? 4.0;
     const volume = area * depth;
     const q_peak = inf.flow * 1.1;
-    const sor = q_peak / area;
-    const sor_mph = sor / 24;
+    const sor_mph = surfaceOverflowRateMph(q_peak, area);          // shared clarifier kernel
     const mlssIn = inf.TSS;
     const totalFlowToClarifier = inf.flow * (1 + uoRatio);
-    const slr_kg_m2_h = (totalFlowToClarifier * mlssIn) / (area * 1000 * 24);
+    const slr_kg_m2_h = solidsLoadingRateKgM2h(totalFlowToClarifier, mlssIn, area); // shared clarifier kernel
 
     const base = emptyUnitOutputs();
     base.sizing = {

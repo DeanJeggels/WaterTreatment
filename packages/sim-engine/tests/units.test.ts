@@ -173,22 +173,24 @@ describe('PrimaryClarifier — Phase 1b', () => {
 
 // ── Aerobic Bioreactor ──────────────────────────────────────
 describe('BioreactorAerobic', () => {
-  it('removes sCOD and performs nitrification', () => {
-    const unit = new BioreactorAerobic({
-      volume: 5000, do_setpoint: 2, srt: 12, yield_obs: 0.45,
-      nitrification_eff: 95, cod_removal_eff: 90, bod_removal_eff: 95, kd: 0.06,
-    });
-    const result = unit.process([typicalInfluent()]);
+  it('removes sCOD and performs nitrification (Marais-Ekama kinetics)', () => {
+    const unit = new BioreactorAerobic({ srt: 15, mlss: 4000, do_setpoint: 2 });
+    const inf = typicalInfluent();
+    const result = unit.process([inf]);
     const out = result.outputs.out;
 
-    // sCOD reduced by 90%
-    expect(out.sCOD).toBeCloseTo(200 * 0.1, 0);
-    // NH3 oxidised ~95%
-    expect(out.NH3N).toBeCloseTo(25 * 0.05, 0);
-    // NO3 should increase
-    expect(out.NO3N).toBeGreaterThan(20);
-    // BOD reduced by 95%
-    expect(out.BOD5).toBeCloseTo(250 * 0.05, 0);
+    // soluble COD drops to the unbiodegradable soluble fraction (fSus × COD)
+    expect(out.sCOD).toBeLessThan(inf.sCOD);
+    expect(out.sCOD).toBeCloseTo(0.06 * inf.COD, 0);
+    // nitrification drives effluent ammonia to the low kinetic residual (Nae)
+    expect(out.NH3N).toBeLessThan(2);
+    // nitrate increases by the nitrified nitrogen
+    expect(out.NO3N).toBeGreaterThan(inf.NO3N);
+    expect(out.NO3N).toBeGreaterThan(15);
+    // total nitrogen is CONSERVED across the reactor (removal happens at the clarifier/WAS)
+    expect(out.TKN + out.NO3N).toBeCloseTo(inf.TKN + inf.NO3N, 2);
+    // BOD reduced (biodegradable consumed)
+    expect(out.BOD5).toBeLessThan(inf.BOD5);
   });
 
   it('produces MLSS metadata', () => {
@@ -232,9 +234,9 @@ describe('BioreactorAerobic', () => {
     assertValidV2Outputs(result);
   });
 
-  it('marks only volume + SRT as essential, rest advanced', () => {
+  it('marks only SRT + MLSS as essential, rest advanced', () => {
     const essential = bioreactorAerobicDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
-    expect(essential).toEqual(['volume', 'srt']);
+    expect(essential).toEqual(['srt', 'mlss']);
   });
 
   it('folds in process-air blower sizing from O2 demand', () => {
@@ -267,12 +269,13 @@ describe('BioreactorAerobic — Phase 1b', () => {
     const inf = { ...emptyWaterQuality(), flow: 10000, sCOD: 300, COD: 500, NH3N: 30, TKN: 40 };
     const result = unit.process([inf]);
 
-    expect(result.sizing?.volume.value).toBe(5000);
-    expect(result.sizing?.HRT.value).toBeCloseTo((5000 / 10000) * 24, 1);
+    expect(result.sizing?.volume.value).toBeGreaterThan(0); // derived from MXt / MLSS
+    expect(result.sizing?.volume.value).toBe(result.sizing?.requiredVolume?.value); // volume is the calculated requirement
+    expect(result.sizing?.HRT.value).toBeGreaterThan(0);
     expect(result.sizing?.MLSS).toBeDefined();
 
-    assertHasCalculationRecord(result.calculationRecords, 'HRT');
-    assertHasCalculationRecord(result.calculationRecords, 'O2');
+    assertHasCalculationRecord(result.calculationRecords, 'V');    // required reactor volume
+    assertHasCalculationRecord(result.calculationRecords, 'FOn');  // nitrification O2 demand
     assertHasCalculationRecord(result.calculationRecords, 'MLSS');
 
     const civil = result.capex!.lineItems.find(i => i.category === 'civil');
@@ -310,9 +313,9 @@ describe('BioreactorAnoxic', () => {
     assertValidV2Outputs(result);
   });
 
-  it('marks only volume as essential, rest advanced', () => {
+  it('marks SRT + anoxic fraction as essential (volume is derived, not an input)', () => {
     const essential = bioreactorAnoxicDefinition.parameterSchema.filter(p => !p.advanced).map(p => p.key);
-    expect(essential).toEqual(['volume']);
+    expect(essential).toEqual(['srt', 'anoxic_fraction']);
   });
 });
 
@@ -321,9 +324,10 @@ describe('BioreactorAnoxic — Phase 1b', () => {
     const unit = new BioreactorAnoxic({
       volume: 2000, depth: 4.5, denitrification_eff: 85, cod_n_ratio: 6,
     });
-    const inf = { ...emptyWaterQuality(), flow: 5000, sCOD: 300, NO3N: 15, TSS: 3500 };
+    const inf = { ...emptyWaterQuality(), flow: 5000, sCOD: 300, NO3N: 15, TSS: 3500, VSS: 2800 };
     const result = unit.process([inf]);
-    expect(result.sizing?.volume.value).toBe(2000);
+    expect(result.sizing?.volume.value).toBeGreaterThan(0); // derived from the denitrification rate, not a stored 2000
+    expect(result.sizing?.volume.value).toBe(result.sizing?.requiredVolume?.value);
     expect(result.energy?.installedKW).toBeGreaterThan(0);
     expect(result.capex!.lineItems.find(i => i.category === 'civil')).toBeDefined();
     expect(result.capex!.lineItems.find(i => i.category === 'mechanical')).toBeDefined();
