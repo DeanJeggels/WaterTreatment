@@ -25,6 +25,7 @@ import type { MleMbrBasis, MleMbrDesign, MleMbrConstants, MembraneModel, LandUse
 // const so the string literals are never re-typed inline in the matching logic.
 const UNIT = {
   influent: 'influent',
+  anaerobic: 'bioreactor_anaerobic',
   anoxic: 'bioreactor_anoxic',
   aerobic: 'bioreactor_aerobic',
   mbr: 'mbr',
@@ -44,8 +45,9 @@ const BASIS_DEFAULTS = {
 
 export interface RecognisedTrain {
   matched: boolean;
-  config: 'MLE' | 'MLE_MBR' | null;
+  config: 'MLE' | 'MLE_MBR' | 'UCT' | 'UCT_MBR' | null;
   influentNodeId?: string;
+  anaerobicNodeId?: string;
   anoxicNodeId?: string;
   aerobicNodeId?: string;
   separatorNodeId?: string;
@@ -136,29 +138,34 @@ export function recogniseMleTrain(nodes: GraphNode[], edges: GraphEdge[]): Recog
     return { error: `${label}: too many in-line pre-treatment units.` };
   };
 
-  // Hop 1: influent -> first biological stage (skipping any headworks).
-  const first = stepCore(influent.id, 'Influent');
-  if ('error' in first) return noMatch(first.error);
-
+  // Walk the biological core forward (skipping headworks): the reactor sequence is
+  //   [anaerobic (UCT/EBPR)] -> [anoxic (N removal)] -> aerobic -> separator.
+  // Anaerobic and anoxic zones are each optional; the aerobic reactor is required.
+  let anaerobicNodeId: string | undefined;
   let anoxicNodeId: string | undefined;
-  let aerobicNode: GraphNode;
-  let aerobicId: string;
+  let aerobicId: string | undefined;
 
-  if (unitTypeOf(first.node) === UNIT.anoxic) {
-    anoxicNodeId = first.id;
-    // Hop 2: anoxic -> aerobic.
-    const second = stepCore(first.id, 'Anoxic reactor');
-    if ('error' in second) return noMatch(second.error);
-    if (unitTypeOf(second.node) !== UNIT.aerobic) {
-      return noMatch(`Expected aerobic reactor after anoxic, found '${unitTypeOf(second.node)}'.`);
-    }
-    aerobicNode = second.node;
-    aerobicId = second.id;
-  } else if (unitTypeOf(first.node) === UNIT.aerobic) {
-    aerobicNode = first.node;
-    aerobicId = first.id;
+  let cur = stepCore(influent.id, 'Influent');
+  if ('error' in cur) return noMatch(cur.error);
+
+  // Optional leading anaerobic (EBPR) zone — the UCT defining feature.
+  if (unitTypeOf(cur.node) === UNIT.anaerobic) {
+    anaerobicNodeId = cur.id;
+    cur = stepCore(cur.id, 'Anaerobic reactor');
+    if ('error' in cur) return noMatch(cur.error);
+  }
+  // Optional anoxic (denitrification) zone.
+  if (unitTypeOf(cur.node) === UNIT.anoxic) {
+    anoxicNodeId = cur.id;
+    cur = stepCore(cur.id, 'Anoxic reactor');
+    if ('error' in cur) return noMatch(cur.error);
+  }
+  // Aerobic reactor — required.
+  if (unitTypeOf(cur.node) === UNIT.aerobic) {
+    aerobicId = cur.id;
   } else {
-    return noMatch(`Expected anoxic or aerobic reactor after influent, found '${unitTypeOf(first.node)}'.`);
+    const after = anaerobicNodeId || anoxicNodeId ? '' : ' after influent';
+    return noMatch(`Expected an aerobic reactor in the train, found '${unitTypeOf(cur.node)}'${after}.`);
   }
 
   // Hop: aerobic -> separator (mbr or secondary_clarifier).
@@ -184,18 +191,29 @@ export function recogniseMleTrain(nodes: GraphNode[], edges: GraphEdge[]): Recog
   // sim. The drag-and-link train sizes itself either way.
   const hasImlr = anoxicNodeId !== undefined
     && edges.some((e) => e.recycleRatio !== undefined && e.source === aerobicId && e.target === anoxicNodeId);
-  const imlrNote = anoxicNodeId && !hasImlr ? ' (draw an IMLR recycle line aerobic -> anoxic for full nitrate return)' : '';
+  const imlrNote = anoxicNodeId && !hasImlr ? ' (draw an IMLR a-recycle aerobic -> anoxic for full nitrate return)' : '';
+  // UCT r-recycle: mixed liquor from the anoxic zone back to the anaerobic zone
+  // (nitrate-free, to protect P-release). Recognise the train either way; nudge if absent.
+  const hasRRecycle = anaerobicNodeId !== undefined && anoxicNodeId !== undefined
+    && edges.some((e) => e.recycleRatio !== undefined && e.source === anoxicNodeId && e.target === anaerobicNodeId);
+  const rNote = anaerobicNodeId && anoxicNodeId && !hasRRecycle ? ' (draw a UCT r-recycle anoxic -> anaerobic to keep the anaerobic zone nitrate-free)' : '';
+
+  const isUct = anaerobicNodeId !== undefined;
+  const config = isUct ? (isMbr ? 'UCT_MBR' : 'UCT') : (isMbr ? 'MLE_MBR' : 'MLE');
+  const label = isUct ? (isMbr ? 'UCT-MBR' : 'UCT') : (isMbr ? 'MLE-MBR' : 'MLE');
+  const sequence = `influent -> ${anaerobicNodeId ? 'anaerobic -> ' : ''}${anoxicNodeId ? 'anoxic -> ' : ''}aerobic -> ${isMbr ? 'mbr' : 'secondary_clarifier'} -> effluent`;
 
   return {
     matched: true,
-    config: isMbr ? 'MLE_MBR' : 'MLE',
+    config,
     influentNodeId: influent.id,
+    anaerobicNodeId,
     anoxicNodeId,
     aerobicNodeId: aerobicId,
     separatorNodeId: sep.id,
     effluentNodeId: eff.id,
     mbr: isMbr,
-    reason: `Matched ${isMbr ? 'MLE-MBR' : 'MLE'} train: influent -> ${anoxicNodeId ? 'anoxic -> ' : ''}aerobic -> ${isMbr ? 'mbr' : 'secondary_clarifier'} -> effluent.${imlrNote}`,
+    reason: `Matched ${label} train: ${sequence}.${imlrNote}${rNote}`,
   };
 }
 
@@ -222,6 +240,7 @@ export function basisFromTrain(
   const adwfM3d = Number(params.flow ?? 0);
   const codMgL = Number(params.COD ?? 0);
   const nitrogenRemoval = train.anoxicNodeId !== undefined;
+  const phosphorusRemoval = train.anaerobicNodeId !== undefined;
   const mbrRequired = train.mbr;
   const dischargeStandard: DischargeStandard = mbrRequired ? 'Special' : 'General';
 
@@ -231,6 +250,7 @@ export function basisFromTrain(
   // a block omits a value the design-spec default applies.
   const aerParams = train.aerobicNodeId ? parametersOf(nodeById.get(train.aerobicNodeId)!) : {};
   const anxParams = train.anoxicNodeId ? parametersOf(nodeById.get(train.anoxicNodeId)!) : {};
+  const anaParams = train.anaerobicNodeId ? parametersOf(nodeById.get(train.anaerobicNodeId)!) : {};
   const imlrEdge = train.anoxicNodeId
     ? edges.find((e) => e.recycleRatio !== undefined && e.source === train.aerobicNodeId && e.target === train.anoxicNodeId)
     : undefined;
@@ -239,6 +259,7 @@ export function basisFromTrain(
   if (aerParams.srt) sizingOverrides.sludgeAgeDays = Number(aerParams.srt);
   if (aerParams.mlss) sizingOverrides.mlssMgL = Number(aerParams.mlss);
   if (anxParams.anoxic_fraction) sizingOverrides.anoxicMassFraction = Number(anxParams.anoxic_fraction);
+  if (anaParams.anaerobic_fraction) sizingOverrides.anaerobicMassFraction = Number(anaParams.anaerobic_fraction);
   if (imlrEdge?.recycleRatio) sizingOverrides.aRecycle = Number(imlrEdge.recycleRatio);
 
   return {
@@ -248,7 +269,7 @@ export function basisFromTrain(
     tmaxC: overrides?.tmaxC ?? BASIS_DEFAULTS.tmaxC,
     elevationM: overrides?.elevationM ?? BASIS_DEFAULTS.elevationM,
     nitrogenRemoval,
-    phosphorusRemoval: false,
+    phosphorusRemoval,
     dischargeStandard,
     mbrRequired,
     membraneModel: overrides?.membraneModel ?? BASIS_DEFAULTS.membraneModel,

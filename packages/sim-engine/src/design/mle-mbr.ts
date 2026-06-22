@@ -46,6 +46,7 @@ export interface MleMbrConstants {
   sludgeAgeDays: number; // SRT
   mlssMgL: number;
   anoxicMassFraction: number; // fxt
+  anaerobicMassFraction: number; // fan — extra unaerated fraction for UCT (EBPR); fxm = fxt + fan
   aRecycle: number;
   sRecycle: number;
   rRecycle: number;
@@ -98,6 +99,7 @@ const DEFAULTS: MleMbrConstants = {
   sludgeAgeDays: 20,
   mlssMgL: 12000, // SPEC default for MBR (xlsm worked example used 10000)
   anoxicMassFraction: 0.275, // SPEC default (xlsm used 0.25)
+  anaerobicMassFraction: 0.1, // UCT anaerobic (EBPR) zone — extra unaerated fraction (sheet 5: fxm − fxt)
   aRecycle: 4,
   sRecycle: 0,
   rRecycle: 1,
@@ -185,7 +187,7 @@ export interface SizedTank { name: string; volumeM3: number; options: [TankOptio
 export interface MleMbrDesign {
   basis: MleMbrBasis;
   constants: MleMbrConstants;
-  process: { config: ProcessConfig; minSludgeAgeDays: number; sludgeAgeDays: number; mlssMgL: number; trains: number; recycle: { a: number; s: number; r: number } };
+  process: { config: ProcessConfig; minSludgeAgeDays: number; sludgeAgeDays: number; mlssMgL: number; trains: number; recycle: { a: number; s: number; r: number }; massFractions: { anoxic: number; anaerobic: number; unaerated: number } };
   flows: FlowSet;
   influent: DerivedInfluent;
   fractionation: CodFractionation;
@@ -276,7 +278,10 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
 
   // ---- [4/5] Reactor volume + sizing ----
   const sizing = reactorSizing(
-    { mlssMgL: k.mlssMgL, volumeSafetyFactor: k.volumeSafetyFactor, anoxicMassFraction: k.anoxicMassFraction },
+    {
+      mlssMgL: k.mlssMgL, volumeSafetyFactor: k.volumeSafetyFactor,
+      anoxicMassFraction: k.anoxicMassFraction, anaerobicMassFraction: k.anaerobicMassFraction,
+    },
     masses, Q, Rs, config,
   );
   const Vmin = sizing.volumeMinM3;
@@ -291,6 +296,14 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
   records.push(rec('Total reactor volume (min)', 'Vmin', 'Vmin = MXt / MLSS × 1000', { MXt: { value: MXt, unit: 'kgTSS', source: 'computed' }, MLSS: { value: k.mlssMgL, unit: 'mg/L', source: 'default' } }, Vmin, 'm3'));
   records.push(rec('Total reactor volume (selected)', 'Vt', 'Vt = Vmin × safety', { Vmin: { value: Vmin, unit: 'm3', source: 'computed' }, safety: { value: k.volumeSafetyFactor, unit: '', source: 'default' } }, Vt, 'm3'));
   records.push(rec('Sludge waste rate', 'Qw', 'Qw = Vmin / Rs', { Vmin: { value: Vmin, unit: 'm3', source: 'computed' }, Rs: { value: Rs, unit: 'd', source: 'default' } }, Qw, 'm3/d'));
+  // Zone split (WWTP Design.xlsm sheet 5). MLE: Va = Vt(1−fxt), Van = 0. UCT: an
+  // anaerobic (EBPR) zone is carved out — fxm = fxt + fan is the total unaerated
+  // mass fraction, Va = Vt(1−fxm), Vax = Vt·fxt, Van = Vt(fxm−fxt) = Vt·fan.
+  records.push(rec('Anoxic zone volume', 'Vax', 'Vax = Vt × fxt', { Vt: { value: Vt, unit: 'm3', source: 'computed' }, fxt: { value: fxt, unit: '', source: 'anoxic mass fraction' } }, Vax, 'm3', 'WWTP Design.xlsm sheet 5 C15'));
+  if (config === 'A2O_UCT') {
+    records.push(rec('Anaerobic (EBPR) zone volume', 'Van', 'Van = Vt × fan  (fan = fxm − fxt)', { Vt: { value: Vt, unit: 'm3', source: 'computed' }, fan: { value: fan, unit: '', source: 'anaerobic mass fraction (UCT)' } }, Van, 'm3', 'WWTP Design.xlsm sheet 5 C16'));
+  }
+  records.push(rec('Aerobic zone volume', 'Va', config === 'A2O_UCT' ? 'Va = Vt × (1 − fxm)' : 'Va = Vt × (1 − fxt)', { Vt: { value: Vt, unit: 'm3', source: 'computed' }, fxm: { value: fxt + fan, unit: '', source: 'total unaerated mass fraction' } }, Va, 'm3', 'WWTP Design.xlsm sheet 5 C14'));
 
   // ---- [4] Nitrogen balance ----
   const nbal = nitrogenBalance(
@@ -397,12 +410,12 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
   const thickeningSiloM3 = round(Qw * 3 * 0.4, 2);
 
   if (k.mlssMgL > 12000) warnings.push(`MLSS ${k.mlssMgL} mg/L above the typical MBR ceiling (8000–12000).`);
-  if (config === 'A2O_UCT') warnings.push('P-removal selected: anaerobic zone added (UCT) — EBPR sizing is simplified; confirm at detailed design.');
+  if (config === 'A2O_UCT') warnings.push(`UCT process: anaerobic (EBPR) zone = ${round(Van, 1)} m³ (fan = ${round(fan, 3)} of the reactor mass), fed by the influent + r-recycle from the anoxic zone (nitrate-free) to protect P-release. Confirm the influent VFA / rbCOD supports the target P removal at detailed design.`);
 
   return {
     basis,
     constants: k,
-    process: { config, minSludgeAgeDays: round((1 + fxt) / (muAmT - bAT), 1), sludgeAgeDays: Rs, mlssMgL: k.mlssMgL, trains: 1, recycle: { a: k.aRecycle, s: k.sRecycle, r: k.rRecycle } },
+    process: { config, minSludgeAgeDays: round((1 + fxt) / (muAmT - bAT), 1), sludgeAgeDays: Rs, mlssMgL: k.mlssMgL, trains: 1, recycle: { a: k.aRecycle, s: k.sRecycle, r: k.rRecycle }, massFractions: { anoxic: round(fxt, 3), anaerobic: round(fan, 3), unaerated: round(fxt + fan, 3) } },
     flows,
     influent: Object.fromEntries(Object.entries(influent).map(([key, v]) => [key, round(v, 1)])) as unknown as DerivedInfluent,
     fractionation,

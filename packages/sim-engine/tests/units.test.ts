@@ -362,8 +362,10 @@ describe('BioreactorAnaerobic — Phase 1b', () => {
     });
     const inf = { ...emptyWaterQuality(), flow: 5000, sCOD: 200, TP: 10 };
     const result = unit.process([inf]);
-    expect(result.sizing?.volume.value).toBe(1500);
-    expect(result.sizing?.HRT.value).toBeCloseTo((1500 / 5000) * 24, 1);
+    // Volume is now DERIVED from a typical EBPR contact time (~1 h), not a stored
+    // input; a recognised UCT train overrides it with the sheet-5 mass-fraction split.
+    expect(result.sizing?.volume.value).toBeCloseTo((1.0 / 24) * 5000, 1);
+    expect(result.sizing?.HRT.value).toBeCloseTo(1.0, 1);
     expect(result.energy?.installedKW).toBeGreaterThan(0);
     const civil = result.capex!.lineItems.find(i => i.category === 'civil');
     const mech = result.capex!.lineItems.find(i => i.category === 'mechanical');

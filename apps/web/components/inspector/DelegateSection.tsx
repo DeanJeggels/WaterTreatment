@@ -33,6 +33,7 @@ export function DelegateSection({ evaluation }: Props) {
     { label: 'Total reactor', value: `${num(design.reactor.volumeSelectedM3)} m³` },
     { label: 'Aerobic volume', value: `${num(design.reactor.aerobicVolumeM3)} m³` },
     ...(design.reactor.anoxicVolumeM3 > 0 ? [{ label: 'Anoxic volume', value: `${num(design.reactor.anoxicVolumeM3)} m³` }] : []),
+    ...(design.reactor.anaerobicVolumeM3 > 0 ? [{ label: 'Anaerobic volume', value: `${num(design.reactor.anaerobicVolumeM3)} m³` }] : []),
     { label: 'Sludge age (SRT)', value: `${num(design.process.sludgeAgeDays, 0)} d` },
     { label: 'MLSS', value: `${num(design.process.mlssMgL, 0)} mg/L` },
     { label: 'Effluent NH₃-N', value: `${num(design.effluent.ammoniaMgL, 2)} mg/L` },
