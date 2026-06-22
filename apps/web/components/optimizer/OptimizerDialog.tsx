@@ -208,6 +208,7 @@ export default function OptimizerDialog() {
                     ['Total reactor', `${num(design.reactor.volumeSelectedM3)} m³`],
                     ['Aerobic volume', `${num(design.reactor.aerobicVolumeM3)} m³`],
                     ...(design.reactor.anoxicVolumeM3 > 0 ? [['Anoxic volume', `${num(design.reactor.anoxicVolumeM3)} m³`] as [string, string]] : []),
+                    ...(design.reactor.anaerobicVolumeM3 > 0 ? [['Anaerobic volume', `${num(design.reactor.anaerobicVolumeM3)} m³`] as [string, string]] : []),
                     ['Total HRT', `${num(design.reactor.hrtTotalH)} h`],
                     ['SRT', `${num(design.process.sludgeAgeDays, 0)} d`],
                     ['MLSS', `${num(design.process.mlssMgL, 0)} mg/L`],

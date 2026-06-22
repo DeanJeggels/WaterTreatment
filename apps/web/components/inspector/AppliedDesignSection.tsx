@@ -36,6 +36,9 @@ export function AppliedDesignSection({ appliedDesign }: { appliedDesign: Applied
     ...(design.reactor.anoxicVolumeM3 > 0
       ? ([['Anoxic volume', `${n(design.reactor.anoxicVolumeM3)} m³`]] as Array<[string, string]>)
       : []),
+    ...(design.reactor.anaerobicVolumeM3 > 0
+      ? ([['Anaerobic volume', `${n(design.reactor.anaerobicVolumeM3)} m³`]] as Array<[string, string]>)
+      : []),
     ['Total HRT', `${n(design.reactor.hrtTotalH)} h`],
     ['SRT', `${n(design.process.sludgeAgeDays, 0)} d`],
     ['MLSS', `${n(design.process.mlssMgL, 0)} mg/L`],

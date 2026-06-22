@@ -135,6 +135,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
         const findId = (unitType: string) => nodes.find((n) => n.data.unitType === unitType)?.id;
         const aerobicId = train.aerobicNodeId ?? findId('bioreactor_aerobic');
         const anoxicId = train.anoxicNodeId ?? findId('bioreactor_anoxic');
+        const anaerobicId = train.anaerobicNodeId ?? findId('bioreactor_anaerobic');
         const separatorId = train.separatorNodeId ?? findId('mbr');
         const note = appliedDesign
           ? `Sized by the applied optimiser design (${appliedDesign.trainLabel}).`
@@ -157,6 +158,12 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
             volume: { value: design.reactor.anoxicVolumeM3, unit: 'm3' },
             requiredVolume: { value: design.reactor.anoxicVolumeM3, unit: 'm3' },
             HRT: { value: design.reactor.anoxicHrtH, unit: 'h' },
+          });
+        }
+        if (design.reactor.anaerobicVolumeM3 > 0) {
+          patch(anaerobicId, {
+            volume: { value: design.reactor.anaerobicVolumeM3, unit: 'm3' },
+            HRT: { value: design.reactor.anaerobicHrtH, unit: 'h' },
           });
         }
         if (design.mbr.included) {
