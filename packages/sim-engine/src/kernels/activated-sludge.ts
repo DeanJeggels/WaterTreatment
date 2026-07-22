@@ -216,16 +216,26 @@ export interface NitrogenInputs {
   nitrogenRemoval: boolean;
 }
 
-/** Steady-state nitrogen balance & effluent N (sheet 4). */
+/**
+ * Steady-state nitrogen balance & effluent N (sheet 4).
+ *
+ * Nitrifiers grow only in the AERATED sludge mass, so the nitrification rate
+ * scales with (1 − total unaerated fraction). The total unaerated fraction is
+ * anoxic (fxt) + anaerobic/EBPR (fan); passing only fxt would count the
+ * anaerobic zone as aerated and under-predict effluent ammonia for A2O/UCT
+ * trains. `fan` defaults to 0 for MLE and pure-aerobic configs (no EBPR zone).
+ */
 export function nitrogenBalance(
   c: NitrogenConstants,
   inp: NitrogenInputs,
   kin: Pick<Kinetics, 'muAmT' | 'KnT' | 'bAT'>,
   fxt: number,
+  fan: number = 0,
 ): NitrogenBalance {
   const Ns = ((c.fnUPO * inp.MXv) / (inp.flow * inp.srtDays)) * 1000;
   const bRecip = kin.bAT + 1 / inp.srtDays;
-  const ammoniaMgL = (kin.KnT * bRecip) / (kin.muAmT * (1 - fxt) - bRecip);
+  // Aerated fraction = 1 − fxm, where fxm = fxt + fan (total unaerated).
+  const ammoniaMgL = (kin.KnT * bRecip) / (kin.muAmT * (1 - fxt - fan) - bRecip);
   const usOrgN = c.usOrgN ?? 2;
   const tknMgL = Math.max(ammoniaMgL, 0) + usOrgN;
   const nitrificationCapacity = inp.nitrogenRemoval ? Math.max(0, inp.TKN - Ns - tknMgL) : 0;

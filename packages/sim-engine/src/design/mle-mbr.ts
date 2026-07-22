@@ -309,7 +309,7 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
   const nbal = nitrogenBalance(
     { fnUPO: k.fnUPO, alkalinityMgL: influent.alkalinity, aRecycle: k.aRecycle, sRecycle: k.sRecycle },
     { TKN: influent.TKN, MXv, flow: Q, srtDays: Rs, config, nitrogenRemoval: basis.nitrogenRemoval },
-    kin, fxt,
+    kin, fxt, fan,
   );
   const Ns = nbal.Ns;
   const Nae = nbal.ammoniaMgL;
@@ -322,7 +322,7 @@ export function designMleMbr(basis: MleMbrBasis): MleMbrDesign {
   const alkRecovered = nbal.alkRecovered;
   const effAlk = nbal.effluentAlkalinityMgL;
   if (effAlk < 40) warnings.push(`Effluent alkalinity ${round(effAlk, 0)} mg/L < 40 — lime dosing may be required to prevent bulking.`);
-  records.push(rec('Effluent ammonia', 'Nae', 'Nae = KnT(bAT+1/Rs) / (μAmT(1-fxt) - (bAT+1/Rs))', { KnT: { value: KnT, unit: 'mgN/L', source: 'kinetics' }, muAmT: { value: muAmT, unit: '1/d', source: 'kinetics' } }, Nae, 'mgN/L'));
+  records.push(rec('Effluent ammonia', 'Nae', 'Nae = KnT(bAT+1/Rs) / (μAmT(1-fxm) - (bAT+1/Rs)),  fxm = fxt + fan', { KnT: { value: KnT, unit: 'mgN/L', source: 'kinetics' }, muAmT: { value: muAmT, unit: '1/d', source: 'kinetics' }, fxm: { value: fxt + fan, unit: '', source: 'total unaerated mass fraction' } }, Nae, 'mgN/L'));
   records.push(rec('Effluent nitrate', 'Nne', 'Nne = Nc / (a+s+1)', { Nc: { value: Nc, unit: 'mgN/L', source: 'computed' }, a: { value: k.aRecycle, unit: '', source: 'default' } }, Nne, 'mgNO3/L'));
 
   // ---- [7] MBR (before aeration: scour O2 credits aeration) ----
